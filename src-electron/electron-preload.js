@@ -27,3 +27,12 @@
  *   }
  * }
  */
+
+// BoMix
+import { contextBridge, ipcRenderer } from "electron";
+
+contextBridge.exposeInMainWorld("BoMixAPI", {
+  sendAction: async (action, data) => {
+    return ipcRenderer.invoke("BoMix-action", { action, data });
+  },
+});
