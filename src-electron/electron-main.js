@@ -20,12 +20,20 @@ function createWindow() {
     width: 1000,
     height: 600,
     useContentSize: true,
+    //frame: false,
     webPreferences: {
-      contextIsolation: true,
+      contextIsolation: false,
+      enableRemoteModule: true, // 启用 remote 模块
+      nodeIntegration: true, // 启用 Node.js 集成
+      //sandbox: false,
       // More info: https://v2.quasar.dev/quasar-cli-vite/developing-electron-apps/electron-preload-script
       preload: path.resolve(__dirname, process.env.QUASAR_ELECTRON_PRELOAD),
     },
   });
+
+  //enable(mainWindow.webContents);
+  require("@electron/remote/main").initialize();
+  require("@electron/remote/main").enable(mainWindow.webContents);
 
   mainWindow.loadURL(process.env.APP_URL);
 
