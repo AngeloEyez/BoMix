@@ -3,8 +3,8 @@ import path from "path";
 import os from "os";
 
 // BoMix
-import { BoMixApp } from "app/bomix"; // 引入 Bonita 入口
-const bonitaapp = new BoMixApp();
+import { BoMixM } from "app/bomix/bomixM"; // 引入 Bonita 入口
+const bonitaapp = new BoMixM();
 
 // needed in case process is undefined under Linux
 const platform = process.platform || os.platform();

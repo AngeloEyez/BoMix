@@ -1,17 +1,27 @@
 import { app, ipcMain } from "electron";
+import Datastore from "nedb-promises";
 import log from "app/bomix/utils/logger";
 import path from "path";
 
-export class BoMixApp {
+export class BoMixM {
+  db;
+
   constructor() {
     this.#setupIpcHandlers();
-    log.log("BoMixApp initialized");
+
+    this.db = new Datastore();
+    console.log(this.db);
 
     log.log(app.getPath("exe"));
     log.log(path.join(app.getPath("exe"), "../conf.db"));
+    log.log("BoMixR initialized");
   }
 
-  // 封裝 IPC API
+  /**
+   * @description 封裝 IPC API
+   * @param
+   * @returns
+   */
   #setupIpcHandlers() {
     ipcMain.handle("BoMix-action", async (_event, args) => {
       const { action, data } = args;
@@ -38,6 +48,6 @@ export class BoMixApp {
       }
     });
 
-    console.log("BoMixApp - IPC initialized.");
+    console.log("BoMixR - IPC initialized.");
   }
 }
