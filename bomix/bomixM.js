@@ -1,5 +1,6 @@
 import { app, ipcMain } from "electron";
 import Datastore from "nedb-promises";
+import camo from "follicle";
 import log from "app/bomix/utils/logger";
 import path from "path";
 
@@ -9,9 +10,16 @@ export class BoMixM {
   constructor() {
     this.#setupIpcHandlers();
 
-    this.db = new Datastore();
-    console.log(this.db);
+    //this.db = new Datastore();
+    //console.log(this.db);
+    let connect = camo.connect;
+    let database;
+    let uri = "nedb://memory";
+    connect(uri).then(function (db) {
+      this.db = db;
+    });
 
+    console.log(database);
     log.log(app.getPath("exe"));
     log.log(path.join(app.getPath("exe"), "../conf.db"));
     log.log("BoMixR initialized");

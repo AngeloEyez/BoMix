@@ -15,6 +15,7 @@
   "dependencies": {
     "@quasar/extras": "^1.16.4",
     "electron-log": "^5.2.0",
+    "follicle": "^3.1.0",
     "nedb-promises": "^6.2.3",
     "quasar": "^2.16.0",
     "vue": "^3.4.18",
