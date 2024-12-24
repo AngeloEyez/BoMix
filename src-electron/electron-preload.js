@@ -35,4 +35,7 @@ contextBridge.exposeInMainWorld("BoMixAPI", {
   sendAction: async (action, data) => {
     return ipcRenderer.invoke("BoMix-action", { action, data });
   },
+  selectDirectory: async () => {
+    return ipcRenderer.invoke("dialog:openDirectory");
+  },
 });
