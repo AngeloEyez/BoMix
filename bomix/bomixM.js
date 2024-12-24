@@ -9,9 +9,23 @@ export class BoMixM {
   constructor() {
     this.#setupIpcHandlers();
 
-    this.db = new Datastore();
+    this.db = Datastore.create("C:\\Temp\\abc.db");
     console.log(this.db);
 
+    var doc = {
+      hello: "world",
+      n: 5,
+      today: new Date(),
+      nedbIsAwesome: true,
+      notthere: null,
+      notToBeSaved: undefined, // Will not be saved
+      fruits: ["apple", "orange", "pear"],
+      infos: { name: "nedb" },
+    };
+
+    this.db.insert(doc);
+
+    // debug message
     log.log(app.getPath("exe"));
     log.log(path.join(app.getPath("exe"), "../conf.db"));
     log.log("BoMixR initialized");
@@ -32,6 +46,7 @@ export class BoMixM {
           log.log(version);
           return { status: "success", content: version };
 
+        // Just for test
         case "perform-calculation":
           try {
             const result = data;
