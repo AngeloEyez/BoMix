@@ -1,12 +1,16 @@
-import { app, ipcMain } from "electron";
+import { app, ipcMain, dialog } from "electron";
 import Datastore from "nedb-promises";
 import log from "app/bomix/utils/logger";
 import path from "path";
+import { ConfigManager } from "./utils/configManager";
+import pkg from "../package.json";
 
 export class BoMixM {
   db;
+  configManager;
 
   constructor() {
+    this.configManager = new ConfigManager();
     this.#setupIpcHandlers();
 
     this.db = Datastore.create("C:\\Temp\\abc.db");
@@ -42,9 +46,7 @@ export class BoMixM {
 
       switch (action) {
         case "get-app-version":
-          const version = app.getVersion();
-          log.log(version);
-          return { status: "success", content: version };
+          return { status: "success", content: pkg.version };
 
         // Just for test
         case "perform-calculation":
@@ -58,9 +60,32 @@ export class BoMixM {
         case "read-Excel":
           return { status: "success", content: "read-Excel" };
 
+        case "get-config":
+          return {
+            status: "success",
+            content: this.configManager.getConfig(),
+          };
+
+        case "update-config":
+          try {
+            log.log(data);
+            const updatedConfig = this.configManager.updateConfig(data);
+            return { status: "success", content: updatedConfig };
+          } catch (error) {
+            log.log(error);
+            return { status: "error", message: error.message };
+          }
+
         default:
           throw new Error(`Unknown action: ${action}`);
       }
+    });
+
+    ipcMain.handle("dialog:openDirectory", async () => {
+      const result = await dialog.showOpenDialog({
+        properties: ["openDirectory"],
+      });
+      return result.canceled ? null : result.filePaths[0];
     });
 
     console.log("BoMixR - IPC initialized.");
