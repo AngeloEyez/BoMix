@@ -1,17 +1,11 @@
 <template>
-  <q-page class="flex flex-center">
+  <q-page class="index-page">
     <ExcelDropZone />
-    <img
-      alt="Quasar logo"
-      src="~assets/quasar-logo-vertical.svg"
-      style="width: 200px; height: 200px"
-    />
   </q-page>
 </template>
 
 <script setup>
 import ExcelDropZone from "src/components/ExcelDropZone.vue";
-
 import { inject } from "vue";
 
 const bomix = inject("BoMix");
@@ -21,3 +15,10 @@ defineOptions({
   name: "IndexPage",
 });
 </script>
+
+<style lang="scss" scoped>
+.index-page {
+  min-height: 100%;
+  background: white;
+}
+</style>

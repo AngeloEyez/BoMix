@@ -8,8 +8,8 @@ export class BoMixR {
     //this.db = Datastore.create({ filename: 'C:/temp/test.db', autoload: true });
     //this.db = Datastore.create();
     //this.db = Datastore.create({ inMemoryOnly: true });
-    const version = ipc.send("get-app-version", undefined);
-    console.log(version);
+    // const version = ipc.send("get-app-version", undefined);
+    // console.log(version);
   }
 
   /**

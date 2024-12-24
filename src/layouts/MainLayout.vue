@@ -1,37 +1,49 @@
 <template>
-  <q-layout view="lHh Lpr lFf">
-    <q-header elevated>
-      <q-toolbar>
-        <q-btn
-          flat
-          dense
-          round
-          icon="menu"
-          aria-label="Menu"
-          @click="toggleLeftDrawer"
-        />
+  <q-layout view="hHh LpR fFf" class="main-layout">
+    <q-header elevated class="bg-white text-black">
+      <q-toolbar class="header-toolbar">
+        <q-toolbar-title class="text-primary text-bold">BoMix</q-toolbar-title>
 
-        <q-toolbar-title> BoMix </q-toolbar-title>
-
-        <div>v{{ version }}</div>
-
-        <q-btn flat dense round icon="settings" @click="showConfig = true" />
+        <div class="header-right">
+          <span class="version-text">v{{ version }}</span>
+          <q-btn
+            flat
+            dense
+            round
+            icon="settings"
+            class="settings-btn"
+            @click="showConfig = true"
+          />
+        </div>
       </q-toolbar>
     </q-header>
 
-    <q-drawer v-model="leftDrawerOpen" show-if-above bordered>
-      <q-list>
-        <q-item-label header> Essential Links </q-item-label>
+    <div class="left-sidebar" :style="{ width: sidebarWidth + 'px' }">
+      <q-list padding class="sidebar-content">
+        <!-- <q-item-label header class="text-grey-8"> Records </q-item-label> -->
 
         <EssentialLink
           v-for="link in linksList"
           :key="link.title"
           v-bind="link"
+          :mini="isMiniMode"
+          @navigate="handleNavigate"
         />
       </q-list>
-    </q-drawer>
 
-    <q-page-container>
+      <div
+        class="resize-handle"
+        @mousedown="startResize"
+        @click="toggleSidebarMode"
+      >
+        <q-icon
+          :name="isMiniMode ? 'chevron_right' : 'chevron_left'"
+          size="20px"
+        />
+      </div>
+    </div>
+
+    <q-page-container class="content-container" :style="contentStyle">
       <router-view />
     </q-page-container>
 
@@ -40,7 +52,7 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from "vue";
+import { ref, computed, onMounted, onUnmounted } from "vue";
 import EssentialLink from "components/EssentialLink.vue";
 import ConfigDialog from "components/ConfigDialog.vue";
 
@@ -55,57 +67,145 @@ onMounted(async () => {
   if (response.status === "success") {
     version.value = response.content;
   }
+  document.addEventListener("mousemove", handleMouseMove);
+  document.addEventListener("mouseup", handleMouseUp);
 });
+
+onUnmounted(() => {
+  document.removeEventListener("mousemove", handleMouseMove);
+  document.removeEventListener("mouseup", handleMouseUp);
+});
+
+const MINI_WIDTH = 64;
+const FULL_WIDTH = 240;
+const sidebarWidth = ref(FULL_WIDTH);
+const isMiniMode = computed(() => sidebarWidth.value <= MINI_WIDTH + 20);
+const isResizing = ref(false);
+const startX = ref(0);
+const startWidth = ref(0);
+
+const contentStyle = computed(() => ({
+  marginLeft: `${sidebarWidth.value}px`,
+  width: `calc(100% - ${sidebarWidth.value}px)`,
+}));
 
 const linksList = [
   {
-    title: "Docs",
-    caption: "quasar.dev",
-    icon: "school",
-    link: "https://quasar.dev",
-  },
-  {
-    title: "Github",
-    caption: "github.com/quasarframework",
-    icon: "code",
-    link: "https://github.com/quasarframework",
-  },
-  {
-    title: "Discord Chat Channel",
-    caption: "chat.quasar.dev",
-    icon: "chat",
-    link: "https://chat.quasar.dev",
-  },
-  {
-    title: "Forum",
-    caption: "forum.quasar.dev",
-    icon: "record_voice_over",
-    link: "https://forum.quasar.dev",
-  },
-  {
-    title: "Twitter",
-    caption: "@quasarframework",
-    icon: "rss_feed",
-    link: "https://twitter.quasar.dev",
-  },
-  {
-    title: "Facebook",
-    caption: "@QuasarFramework",
-    icon: "public",
-    link: "https://facebook.quasar.dev",
-  },
-  {
-    title: "Quasar Awesome",
-    caption: "Community Quasar projects",
-    icon: "favorite",
-    link: "https://awesome.quasar.dev",
+    title: "Dashboard",
+    caption: "主控台",
+    icon: "dashboard",
+    link: "/",
   },
 ];
 
-const leftDrawerOpen = ref(false);
 const showConfig = ref(false);
 
-function toggleLeftDrawer() {
-  leftDrawerOpen.value = !leftDrawerOpen.value;
+function startResize(e) {
+  if (e.target.classList.contains("resize-handle")) {
+    isResizing.value = true;
+    startX.value = e.clientX;
+    startWidth.value = sidebarWidth.value;
+  }
+}
+
+function handleMouseMove(e) {
+  if (!isResizing.value) return;
+  const diff = e.clientX - startX.value;
+  const newWidth = Math.max(MINI_WIDTH, Math.min(startWidth.value + diff, 400));
+  sidebarWidth.value = newWidth;
+}
+
+function handleMouseUp() {
+  isResizing.value = false;
+}
+
+function toggleSidebarMode() {
+  sidebarWidth.value = isMiniMode.value ? FULL_WIDTH : MINI_WIDTH;
+}
+
+function handleNavigate() {
+  if (window.innerWidth < 1024) {
+    sidebarWidth.value = MINI_WIDTH;
+  }
 }
 </script>
+
+<style lang="scss">
+.main-layout {
+  background-color: #f5f5f5;
+
+  .header-toolbar {
+    height: 64px;
+    padding: 0 20px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+
+    .header-right {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+
+      .version-text {
+        color: #666;
+        font-size: 14px;
+      }
+
+      .settings-btn {
+        color: #666;
+        &:hover {
+          color: var(--q-primary);
+        }
+      }
+    }
+  }
+
+  .left-sidebar {
+    position: fixed;
+    top: 64px;
+    left: 0;
+    bottom: 0;
+    background: white;
+    border-right: 1px solid rgba(0, 0, 0, 0.12);
+    z-index: 1000;
+    transition: width 0.3s ease;
+
+    .sidebar-content {
+      height: 100%;
+      overflow-y: auto;
+      overflow-x: hidden;
+    }
+
+    .resize-handle {
+      position: absolute;
+      top: 50%;
+      right: -12px;
+      width: 24px;
+      height: 24px;
+      background: white;
+      border: 1px solid rgba(0, 0, 0, 0.12);
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      transform: translateY(-50%);
+      z-index: 1001;
+      transition: background-color 0.3s;
+
+      &:hover {
+        background-color: #f0f0f0;
+      }
+
+      &:active {
+        background-color: #e0e0e0;
+      }
+    }
+  }
+
+  .content-container {
+    background-color: #f5f5f5;
+    transition: margin-left 0.3s ease, width 0.3s ease;
+  }
+}
+</style>
