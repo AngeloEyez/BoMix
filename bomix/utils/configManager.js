@@ -6,10 +6,15 @@ import log from "./logger";
 export class ConfigManager {
   #configPath;
   #config;
+  #defaultConfig;
 
   constructor() {
     // 改用 userData 目錄而不是 exe 目錄
     this.#configPath = path.join(app.getPath("userData"), "config.json");
+    // 定義默認配置
+    this.#defaultConfig = {
+      defaultDatabasePath: "",
+    };
     console.log("configPath:", this.#configPath);
     this.#loadConfig();
   }
@@ -21,17 +26,15 @@ export class ConfigManager {
         this.#config = JSON.parse(data);
         log.log("config loaded succesfully:", this.#config);
       } else {
-        // 默認配置
-        this.#config = {
-          defaultPath: "",
-        };
+        // 使用默認配置
+        this.#config = { ...this.#defaultConfig };
         this.#saveConfig();
         log.log("創建默認配置:", this.#config);
       }
     } catch (error) {
       log.error("加載配置文件失敗:", error);
       // 如果加載失敗，使用默認配置
-      this.#config = { defaultPath: "" };
+      this.#config = { ...this.#defaultConfig };
     }
   }
 
@@ -83,13 +86,18 @@ export class ConfigManager {
       }
 
       // 檢查必要的字段
-      if (!("defaultPath" in newConfig)) {
-        throw new Error("配置缺少必要的 defaultPath 字段");
+      const requiredFields = Object.keys(this.#defaultConfig);
+      const missingFields = requiredFields.filter(
+        (field) => !(field in newConfig)
+      );
+
+      if (missingFields.length > 0) {
+        throw new Error(`配置缺少必要的字段: ${missingFields.join(", ")}`);
       }
 
       // 更新配置
       this.#config = {
-        ...this.#config,
+        ...this.#defaultConfig, // 確保所有默認字段都存在
         ...newConfig,
       };
 
@@ -102,5 +110,10 @@ export class ConfigManager {
       log.error(errorMessage);
       throw new Error(errorMessage);
     }
+  }
+
+  // 獲取默認配置
+  getDefaultConfig() {
+    return { ...this.#defaultConfig };
   }
 }

@@ -13,7 +13,7 @@ export class BoMixM {
 
   constructor() {
     this.configManager = new ConfigManager();
-    this.bomManager = new BomManager();
+    this.bomManager = new BomManager(this.configManager);
     this.#setupIpcHandlers();
 
     this.db = Datastore.create("C:\\Temp\\abc.db");
@@ -87,7 +87,7 @@ export class BoMixM {
               throw new Error("No database is currently open");
             }
 
-            // 創建項目
+            // 創建或更新項目
             const project = await db.createProject(data.project);
 
             // 創建所有組
@@ -98,6 +98,7 @@ export class BoMixM {
             return {
               status: "success",
               content: await db.getFullProjectBOM(project._id),
+              message: project.updatedAt ? "專案已���新" : "專案已創建",
             };
           } catch (error) {
             return { status: "error", message: error.message };

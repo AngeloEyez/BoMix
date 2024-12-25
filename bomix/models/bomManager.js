@@ -5,12 +5,20 @@ import log from "../utils/logger";
 
 export class BomManager {
   #currentDb = null;
+  #configManager;
+
+  constructor(configManager) {
+    this.#configManager = configManager;
+  }
 
   async selectOrCreateDatabase() {
     try {
+      const config = this.#configManager.getConfig();
+      const defaultPath = config.defaultDatabasePath || process.cwd();
+
       const result = await dialog.showSaveDialog({
         title: "選擇或創建數據庫文件",
-        defaultPath: path.join(process.cwd(), "bom-series.db"),
+        defaultPath: path.join(defaultPath, "bom-series.db"),
         filters: [{ name: "Database", extensions: ["db"] }],
         properties: ["createDirectory"],
       });

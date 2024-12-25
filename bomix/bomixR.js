@@ -188,17 +188,16 @@ export class BoMixR {
           };
 
           // 跳過空行
-          if (!rowData.hhpn && !rowData.mfgpn) continue;
+          if (!rowData.hhpn || !rowData.mfgpn) continue;
 
           // 如果 A 列有值，創建新的 group
           if (rowData.item) {
             currentGroup = {
               process: sheetName,
               item: rowData.item,
-              project: {
-                name: "", // 這些值可能需要從其他地方獲取
-                models: [],
-              },
+              qty: rowData.qty,
+              location: rowData.location,
+              ccl: rowData.ccl,
               parts: [],
             };
             groups.push(currentGroup);
@@ -206,36 +205,22 @@ export class BoMixR {
             // 添加主要來源
             currentGroup.parts.push({
               hhpn: rowData.hhpn,
-              stdpn: rowData.stdpn,
-              grppn: rowData.grppn,
               description: rowData.description,
               mfg: rowData.mfg,
               mfgpn: rowData.mfgpn,
-              qty: rowData.qty,
-              location: rowData.location,
-              ccl: rowData.ccl,
-              leadtime: rowData.leadtime,
               remark: rowData.remark,
-              approval: rowData.approval,
-              isMainSource: true,
+              isMain: true,
             });
           }
           // 如果 A 列沒有值且有當前 group，添加為次要來源
           else if (currentGroup) {
             currentGroup.parts.push({
               hhpn: rowData.hhpn,
-              stdpn: rowData.stdpn,
-              grppn: rowData.grppn,
               description: rowData.description,
               mfg: rowData.mfg,
               mfgpn: rowData.mfgpn,
-              qty: rowData.qty,
-              location: rowData.location,
-              ccl: rowData.ccl,
-              leadtime: rowData.leadtime,
               remark: rowData.remark,
-              approval: rowData.approval,
-              isMainSource: false,
+              isMain: false,
             });
           }
         }

@@ -51,8 +51,52 @@ export class BomModel {
   }
 
   // Project 操作
+  async findExistingProject(projectData) {
+    try {
+      return await this.#db.findOne({
+        type: "project",
+        name: projectData.name,
+        phase: projectData.phase,
+        bomVersion: projectData.bomVersion,
+      });
+    } catch (error) {
+      log.error("Failed to find existing project:", error);
+      throw error;
+    }
+  }
+
+  async updateProject(projectId, projectData) {
+    try {
+      const updatedProject = await this.#db.update(
+        { _id: projectId },
+        {
+          $set: {
+            ...projectData,
+            updatedAt: new Date(),
+          },
+        },
+        { returnUpdatedDocs: true }
+      );
+
+      // 刪除舊的 groups
+      await this.#db.remove({ type: "group", projectId }, { multi: true });
+
+      log.log("Project updated:", updatedProject);
+      return updatedProject;
+    } catch (error) {
+      log.error("Failed to update project:", error);
+      throw error;
+    }
+  }
+
   async createProject(projectData) {
     try {
+      // 檢查是否存在相同的 project
+      const existingProject = await this.findExistingProject(projectData);
+      if (existingProject) {
+        return await this.updateProject(existingProject._id, projectData);
+      }
+
       const project = {
         type: "project",
         name: projectData.name,
@@ -63,7 +107,7 @@ export class BomModel {
         date: projectData.date || new Date(),
         filename: projectData.filename || "",
         createdAt: new Date(),
-        updatedAt: new Date(),
+        //updatedAt: new Date(),
       };
 
       const savedProject = await this.#db.insert(project);
@@ -79,7 +123,7 @@ export class BomModel {
   async createGroup(projectId, groupData) {
     try {
       // 創建 group key (主源的 MFG+MFGPN)
-      const mainPart = groupData.parts.find((p) => p.isMainSource);
+      const mainPart = groupData.parts.find((p) => p.isMain);
       if (!mainPart) {
         throw new Error("Main source part is required");
       }
@@ -89,32 +133,23 @@ export class BomModel {
         projectId,
         process: groupData.process,
         item: groupData.item || "",
-        project: {
-          name: groupData.project.name,
-          models: groupData.project.models,
-        },
+        qty: groupData.qty || "",
+        location: groupData.location || "",
+        ccl: groupData.ccl || "",
         mfgpnKey: `${mainPart.mfg}_${mainPart.mfgpn}`,
         parts: groupData.parts.map((part) => ({
           hhpn: part.hhpn,
-          stdpn: part.stdpn || "",
-          grppn: part.grppn || "",
           description: part.description,
           mfg: part.mfg,
           mfgpn: part.mfgpn,
-          qty: part.qty,
-          location: part.location,
-          ccl: part.ccl,
-          leadtime: part.leadtime || "",
-          remark: part.remark,
-          approval: part.approval || "",
-          isMainSource: part.isMainSource || false,
+          isMain: part.isMain || false,
         })),
         createdAt: new Date(),
         updatedAt: new Date(),
       };
 
       const savedGroup = await this.#db.insert(group);
-      log.log("Group created:", savedGroup);
+      log.debug("Group created:", savedGroup);
       return savedGroup;
     } catch (error) {
       log.error("Failed to create group:", error);

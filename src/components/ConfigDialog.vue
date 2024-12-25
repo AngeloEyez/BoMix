@@ -1,12 +1,17 @@
 <template>
-  <q-dialog v-model="isOpen" persistent>
+  <q-dialog v-model="isOpen" persistent @keyup.esc="handleCancel">
     <q-card style="min-width: 350px">
       <q-card-section>
         <div class="text-h6">系統設置</div>
       </q-card-section>
 
       <q-card-section class="q-pt-none">
-        <q-input v-model="config.defaultPath" label="預設路徑" outlined dense>
+        <q-input
+          v-model="config.defaultDatabasePath"
+          label="預設數據庫路徑"
+          outlined
+          dense
+        >
           <template v-slot:append>
             <q-btn flat dense icon="folder" @click="selectDirectory" />
           </template>
@@ -14,7 +19,7 @@
       </q-card-section>
 
       <q-card-actions align="right" class="text-primary">
-        <q-btn flat label="取消" v-close-popup />
+        <q-btn flat label="取消" @click="handleCancel" />
         <q-btn flat label="保存" @click="saveConfig" />
       </q-card-actions>
     </q-card>
@@ -40,7 +45,7 @@ const emit = defineEmits(["update:modelValue"]);
 // 組件邏輯
 const isOpen = ref(props.modelValue);
 const config = reactive({
-  defaultPath: "",
+  defaultDatabasePath: "",
 });
 
 // 監聽對話框開啟狀態
@@ -64,7 +69,7 @@ async function loadConfig() {
   try {
     const response = await window.BoMixAPI.sendAction("get-config");
     if (response.status === "success") {
-      config.defaultPath = response.content.defaultPath || "";
+      config.defaultDatabasePath = response.content.defaultDatabasePath || "";
     }
   } catch (error) {
     Notify.create({
@@ -79,7 +84,7 @@ async function saveConfig() {
   try {
     console.log("Saving config:", config);
     const configData = {
-      defaultPath: config.defaultPath,
+      defaultDatabasePath: config.defaultDatabasePath,
     };
     const response = await window.BoMixAPI.sendAction(
       "update-config",
@@ -106,7 +111,7 @@ async function selectDirectory() {
   try {
     const result = await window.BoMixAPI.selectDirectory();
     if (result) {
-      config.defaultPath = result;
+      config.defaultDatabasePath = result;
     }
   } catch (error) {
     Notify.create({
@@ -114,5 +119,10 @@ async function selectDirectory() {
       message: "選擇目錄失敗",
     });
   }
+}
+
+// 處理取消操作
+function handleCancel() {
+  isOpen.value = false;
 }
 </script>
