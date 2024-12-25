@@ -18,6 +18,7 @@
 
 <script setup>
 import { inject } from "vue";
+import { Notify } from "quasar";
 
 const bomix = inject("BoMix");
 
@@ -25,8 +26,25 @@ const handleDrop = async (event) => {
   const files = event.dataTransfer.files;
 
   for (const file of files) {
-    if (file.name.endsWith(".xls") || file.name.endsWith(".xlsx")) {
-      await bomix.importBOMfromXLS(file);
+    try {
+      if (file.name.endsWith(".xls") || file.name.endsWith(".xlsx")) {
+        await bomix.importBOMfromXLS(file);
+        Notify.create({
+          type: "positive",
+          message: `成功導入 ${file.name}`,
+        });
+      } else {
+        Notify.create({
+          type: "warning",
+          message: `跳過非 Excel 檔案: ${file.name}`,
+        });
+      }
+    } catch (error) {
+      Notify.create({
+        type: "negative",
+        message: error.message || "導入失敗",
+        caption: file.name,
+      });
     }
   }
 };
