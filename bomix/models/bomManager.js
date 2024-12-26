@@ -16,18 +16,20 @@ export class BomManager {
       const config = this.#configManager.getConfig();
       const defaultPath = config.defaultDatabasePath || process.cwd();
 
-      const result = await dialog.showSaveDialog({
+      const result = await dialog.showOpenDialog({
         title: "選擇或創建數據庫文件",
-        defaultPath: path.join(defaultPath, "bom-series.db"),
+        defaultPath: defaultPath,
         filters: [{ name: "Database", extensions: ["db"] }],
-        properties: ["createDirectory"],
+        properties: ["openFile", "createDirectory", "promptToCreate"],
+        message: "選擇現有數據庫或輸入新檔案名稱以創建",
       });
 
       if (result.canceled) {
         return null;
       }
 
-      return result.filePath;
+      // 返回選擇的路徑（無論是現有文件還是新文件）
+      return result.filePaths[0];
     } catch (error) {
       log.error("Failed to select database path:", error);
       throw error;
@@ -59,6 +61,27 @@ export class BomManager {
     if (this.#currentDb) {
       await this.#currentDb.close();
       this.#currentDb = null;
+    }
+  }
+
+  async openDatabase(dbPath) {
+    try {
+      if (this.#currentDb) {
+        await this.#currentDb.close();
+      }
+
+      this.#currentDb = new BomModel(dbPath);
+      const seriesInfo = await this.#currentDb.getSeriesInfo();
+
+      if (!seriesInfo) {
+        throw new Error("Invalid database format");
+      }
+
+      log.log("Database opened:", dbPath);
+      return this.#currentDb;
+    } catch (error) {
+      log.error("Failed to open database:", error);
+      throw error;
     }
   }
 }

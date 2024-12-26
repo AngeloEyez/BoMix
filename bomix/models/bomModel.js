@@ -5,15 +5,20 @@ import log from "../utils/logger";
 export class BomModel {
   #db;
   #seriesInfo;
+  #dbPath;
 
   constructor(dbPath) {
     this.#db = Datastore.create(dbPath);
+    this.#dbPath = dbPath;
 
     // 創建索引
     this.#db.ensureIndex({ fieldName: "type" }); // 用於區分不同類型的文檔
     this.#db.ensureIndex({ fieldName: "key" }); // 用於快速查找組
     this.#db.ensureIndex({ fieldName: "projectId" });
     this.#createIndexes();
+
+    // 設定自動壓縮間隔時間（以毫秒為單位）
+    this.#db.setAutocompactionInterval(5 * 60 * 1000);
   }
 
   async #createIndexes() {
@@ -23,6 +28,17 @@ export class BomModel {
     log.log("Database indexes created");
   }
 
+  // 手動觸發壓縮
+  async compactDatabase() {
+    try {
+      await this.#db.compactDatafile();
+      log.log("Database compaction completed");
+    } catch (error) {
+      log.error("Database compaction failed:", error);
+      throw error;
+    }
+  }
+
   // Series 操作
   async initSeries(name, note = "") {
     try {
@@ -30,6 +46,7 @@ export class BomModel {
         type: "series",
         name,
         note,
+        path: this.#dbPath,
         createdAt: new Date(),
         updatedAt: new Date(),
       };
@@ -46,6 +63,9 @@ export class BomModel {
   async getSeriesInfo() {
     if (!this.#seriesInfo) {
       this.#seriesInfo = await this.#db.findOne({ type: "series" });
+      if (this.#seriesInfo && !this.#seriesInfo.path) {
+        this.#seriesInfo.path = this.#dbPath;
+      }
     }
     return this.#seriesInfo;
   }
@@ -149,6 +169,24 @@ export class BomModel {
       };
 
       const savedGroup = await this.#db.insert(group);
+      // 檢查當前進程類型
+      log.log("Current process type:", process.type);
+
+      // 檢查日誌級別
+      log.log("Log levels in createGroup:", {
+        console: log.transports.console.level,
+        file: log.transports.file.level,
+        ipc: log.transports.ipc.level,
+      });
+
+      // 測試不同級別的日誌
+      log.silly("Silly log test");
+      log.debug("Debug log test");
+      log.verbose("Verbose log test");
+      log.info("Info log test");
+      log.warn("Warn log test");
+      log.error("Error log test");
+
       log.debug("Group created:", savedGroup);
       return savedGroup;
     } catch (error) {
@@ -189,8 +227,47 @@ export class BomModel {
 
   // 數據庫操作
   async close() {
-    // 清理資源
-    this.#db = null;
-    this.#seriesInfo = null;
+    try {
+      // 執行最後一次壓縮
+      await this.compactDatabase();
+
+      // 清理資源
+      //this.#db.stopAutocompaction();
+      this.#db = null;
+      this.#seriesInfo = null;
+
+      log.log("Database closed and compacted");
+    } catch (error) {
+      log.error("Error closing database:", error);
+      throw error;
+    }
+  }
+
+  async updateSeriesInfo(seriesData) {
+    try {
+      if (!this.#seriesInfo) {
+        throw new Error("Series info not initialized");
+      }
+
+      const updatedSeries = await this.#db.update(
+        { type: "series" },
+        {
+          $set: {
+            ...seriesData,
+            updatedAt: new Date(),
+          },
+        },
+        { returnUpdatedDocs: true }
+      );
+
+      // 更新快取的系列資訊
+      this.#seriesInfo = updatedSeries;
+
+      log.log("Series info updated:", updatedSeries);
+      return updatedSeries;
+    } catch (error) {
+      log.error("Failed to update series info:", error);
+      throw error;
+    }
   }
 }

@@ -4,6 +4,27 @@
       <q-toolbar class="header-toolbar">
         <q-toolbar-title class="text-primary text-bold">BoMix</q-toolbar-title>
 
+        <div class="series-info" v-if="seriesInfo.name">
+          <span class="series-name">{{ seriesInfo.name }}</span>
+          <q-btn
+            flat
+            dense
+            round
+            icon="edit"
+            size="sm"
+            @click="showEditSeries = true"
+          />
+        </div>
+        <q-btn
+          v-else
+          flat
+          dense
+          round
+          icon="add"
+          size="sm"
+          @click="showEditSeries = true"
+        />
+
         <div class="header-right">
           <span class="version-text">v{{ version }}</span>
           <q-btn
@@ -48,6 +69,7 @@
     </q-page-container>
 
     <ConfigDialog v-model="showConfig" />
+    <EditSeriesDialog v-model="showEditSeries" />
   </q-layout>
 </template>
 
@@ -55,6 +77,7 @@
 import { ref, computed, onMounted, onUnmounted } from "vue";
 import EssentialLink from "components/EssentialLink.vue";
 import ConfigDialog from "components/ConfigDialog.vue";
+import EditSeriesDialog from "components/EditSeriesDialog.vue";
 
 defineOptions({
   name: "MainLayout",
@@ -69,6 +92,7 @@ onMounted(async () => {
   }
   document.addEventListener("mousemove", handleMouseMove);
   document.addEventListener("mouseup", handleMouseUp);
+  await loadSeriesInfo();
 });
 
 onUnmounted(() => {
@@ -99,6 +123,8 @@ const linksList = [
 ];
 
 const showConfig = ref(false);
+const showEditSeries = ref(false);
+const seriesInfo = ref({ name: "", note: "" });
 
 function startResize(e) {
   if (e.target.classList.contains("resize-handle")) {
@@ -126,6 +152,20 @@ function toggleSidebarMode() {
 function handleNavigate() {
   if (window.innerWidth < 1024) {
     sidebarWidth.value = MINI_WIDTH;
+  }
+}
+
+async function loadSeriesInfo() {
+  try {
+    const response = await window.BoMixAPI.sendAction("get-current-database");
+    if (response.status === "success" && response.content) {
+      seriesInfo.value = {
+        name: response.content.name || "",
+        note: response.content.note || "",
+      };
+    }
+  } catch (error) {
+    console.error("Load series info failed:", error);
   }
 }
 </script>
@@ -206,6 +246,18 @@ function handleNavigate() {
   .content-container {
     background-color: #f5f5f5;
     transition: margin-left 0.3s ease, width 0.3s ease;
+  }
+
+  .series-info {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-right: 16px;
+
+    .series-name {
+      font-size: 14px;
+      color: #666;
+    }
   }
 }
 </style>
