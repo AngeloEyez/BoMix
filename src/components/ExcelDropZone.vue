@@ -13,14 +13,17 @@
     >
       <p>拖曳 Excel 檔案到此處</p>
     </div>
+    <EditSeriesDialog v-model="showEditSeries" />
   </q-page>
 </template>
 
 <script setup>
-import { inject } from "vue";
+import { inject, ref } from "vue";
 import { Notify } from "quasar";
+import EditSeriesDialog from "components/EditSeriesDialog.vue";
 
 const bomix = inject("BoMix");
+const showEditSeries = ref(false);
 
 const handleDrop = async (event) => {
   const files = event.dataTransfer.files;
@@ -40,6 +43,15 @@ const handleDrop = async (event) => {
         });
       }
     } catch (error) {
+      if (error.message === "NO_DATABASE") {
+        Notify.create({
+          type: "warning",
+          message: "請先選擇或創建一個 Series 數據庫",
+          timeout: 3000,
+        });
+        showEditSeries.value = true;
+        return;
+      }
       Notify.create({
         type: "negative",
         message: error.message || "導入失敗",

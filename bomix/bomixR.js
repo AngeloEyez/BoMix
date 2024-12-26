@@ -1,9 +1,93 @@
 import log from "./utils/logger";
 import * as XLSX from "xlsx";
+import { ref } from "vue";
 
 export class BoMixR {
+  #seriesInfo;
+  #statistics;
+
   constructor() {
+    this.#seriesInfo = ref({
+      name: "",
+      note: "",
+      path: "",
+      filename: "",
+    });
+    this.#statistics = ref({
+      projectCount: 0,
+      phaseCount: 0,
+      bomCount: 0,
+    });
     log.log("BoMixR initialized");
+  }
+
+  // 獲取 series info
+  getSeriesInfo() {
+    return this.#seriesInfo;
+  }
+
+  // 加載 series 信息
+  async loadSeriesInfo() {
+    try {
+      const response = await window.BoMixAPI.sendAction("get-current-database");
+      if (response.status === "success" && response.content) {
+        this.#seriesInfo.value = {
+          name: response.content.name || "",
+          note: response.content.note || "",
+          path: response.content.path || "",
+          filename: response.content.filename || "",
+        };
+      }
+    } catch (error) {
+      log.error("Load series info failed:", error);
+      throw error;
+    }
+  }
+
+  // 更新 series 信息
+  async updateSeriesInfo(name, note) {
+    try {
+      const response = await window.BoMixAPI.sendAction("update-series", {
+        name,
+        note,
+      });
+      if (response.status === "success") {
+        this.#seriesInfo.value = {
+          name: response.content.name,
+          note: response.content.note,
+          path: response.content.path,
+        };
+      }
+    } catch (error) {
+      log.error("Update series info failed:", error);
+      throw error;
+    }
+  }
+
+  // 選擇並打開數據庫
+  async selectAndOpenDatabase() {
+    try {
+      const response = await window.BoMixAPI.sendAction("select-database");
+      if (response.status === "success" && response.content) {
+        const openResult = await window.BoMixAPI.sendAction("open-database", {
+          path: response.content,
+        });
+
+        if (openResult.status === "success") {
+          this.#seriesInfo.value = {
+            name: openResult.content.name || "",
+            note: openResult.content.note || "",
+            path: openResult.content.path || "",
+            filename: openResult.content.filename || "",
+          };
+          return openResult;
+        }
+      }
+      return null;
+    } catch (error) {
+      log.error("Select and open database failed:", error);
+      throw error;
+    }
   }
 
   test(msg) {
@@ -15,22 +99,8 @@ export class BoMixR {
       // 檢查是否已經初始化數據庫
       const dbInfo = await window.BoMixAPI.sendAction("get-current-database");
       if (!dbInfo.content) {
-        // 如果沒有打開的數據庫，提示用戶創建或選擇
-        const dbPath = await window.BoMixAPI.sendAction("select-database");
-        if (!dbPath.content) {
-          throw new Error("未選擇數據庫路徑");
-        }
-
-        // 初始化數據庫
-        const initResult = await window.BoMixAPI.sendAction("init-database", {
-          path: dbPath.content,
-          seriesName: "New Series", // 這裡可以添加一個對話框讓用戶輸入
-          seriesNote: "Imported from Excel",
-        });
-
-        if (initResult.status !== "success") {
-          throw new Error("數據庫初始化失敗");
-        }
+        // 如果沒有打開的數據庫，拋出特殊錯誤
+        throw new Error("NO_DATABASE");
       }
 
       // 讀取 Excel 文件
@@ -44,6 +114,8 @@ export class BoMixR {
         "import-bom-data",
         bomData
       );
+
+      this.updateStatistics(); // async function
 
       log.log("BOM data imported:", result);
       return result;
@@ -296,6 +368,23 @@ export class BoMixR {
     } catch (error) {
       log.error("Parse Matrix BOM failed:", error);
       throw error;
+    }
+  }
+
+  // 獲取統計數據
+  getStatistics() {
+    return this.#statistics;
+  }
+
+  // 更新統計數據
+  async updateStatistics() {
+    try {
+      const response = await window.BoMixAPI.sendAction("get-statistics");
+      if (response.status === "success") {
+        this.#statistics.value = response.content;
+      }
+    } catch (error) {
+      log.error("Update statistics failed:", error);
     }
   }
 }

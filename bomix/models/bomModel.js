@@ -42,11 +42,13 @@ export class BomModel {
   // Series 操作
   async initSeries(name, note = "") {
     try {
+      const filename = path.parse(this.#dbPath).name;
       const series = {
         type: "series",
         name,
         note,
         path: this.#dbPath,
+        filename: filename,
         createdAt: new Date(),
         updatedAt: new Date(),
       };
@@ -66,6 +68,7 @@ export class BomModel {
       if (this.#seriesInfo && !this.#seriesInfo.path) {
         this.#seriesInfo.path = this.#dbPath;
       }
+      this.#seriesInfo.filename = path.parse(this.#dbPath).name;
     }
     return this.#seriesInfo;
   }
@@ -169,23 +172,6 @@ export class BomModel {
       };
 
       const savedGroup = await this.#db.insert(group);
-      // 檢查當前進程類型
-      log.log("Current process type:", process.type);
-
-      // 檢查日誌級別
-      log.log("Log levels in createGroup:", {
-        console: log.transports.console.level,
-        file: log.transports.file.level,
-        ipc: log.transports.ipc.level,
-      });
-
-      // 測試不同級別的日誌
-      log.silly("Silly log test");
-      log.debug("Debug log test");
-      log.verbose("Verbose log test");
-      log.info("Info log test");
-      log.warn("Warn log test");
-      log.error("Error log test");
 
       log.debug("Group created:", savedGroup);
       return savedGroup;
@@ -267,6 +253,33 @@ export class BomModel {
       return updatedSeries;
     } catch (error) {
       log.error("Failed to update series info:", error);
+      throw error;
+    }
+  }
+
+  async getStatistics() {
+    try {
+      // 獲取所有專案
+      const projects = await this.#db.find({ type: "project" });
+
+      // 計算不重複的專案名稱數量
+      const uniqueProjects = new Set(projects.map((p) => p.name));
+
+      // 計算不重複的階段數量
+      const uniquePhases = new Set(projects.map((p) => p.phase));
+
+      // 計算 BOM 總數（使用 project_phase_bomVersion 組合）
+      const bomCount = new Set(
+        projects.map((p) => `${p.name}_${p.phase}_${p.bomVersion}`)
+      );
+
+      return {
+        projectCount: uniqueProjects.size,
+        phaseCount: uniquePhases.size,
+        bomCount: bomCount.size,
+      };
+    } catch (error) {
+      log.error("Get statistics failed:", error);
       throw error;
     }
   }

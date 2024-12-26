@@ -4,26 +4,20 @@
       <q-toolbar class="header-toolbar">
         <q-toolbar-title class="text-primary text-bold">BoMix</q-toolbar-title>
 
-        <div class="series-info" v-if="seriesInfo.name">
-          <span class="series-name">{{ seriesInfo.name }}</span>
+        <div class="series-info">
+          <span class="series-label">Series:</span>
+          <span :class="['series-name', { 'no-series': !seriesInfo.name }]">
+            {{ seriesInfo.name || "NA" }}
+          </span>
           <q-btn
             flat
             dense
             round
-            icon="edit"
-            size="sm"
+            :icon="seriesInfo.name ? 'edit' : 'add'"
+            class="series-edit-btn"
             @click="showEditSeries = true"
           />
         </div>
-        <q-btn
-          v-else
-          flat
-          dense
-          round
-          icon="add"
-          size="sm"
-          @click="showEditSeries = true"
-        />
 
         <div class="header-right">
           <span class="version-text">v{{ version }}</span>
@@ -74,7 +68,7 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted, onUnmounted } from "vue";
+import { ref, computed, onMounted, onUnmounted, inject } from "vue";
 import EssentialLink from "components/EssentialLink.vue";
 import ConfigDialog from "components/ConfigDialog.vue";
 import EditSeriesDialog from "components/EditSeriesDialog.vue";
@@ -84,6 +78,8 @@ defineOptions({
 });
 
 const version = ref("");
+const bomix = inject("BoMix");
+const seriesInfo = bomix.getSeriesInfo();
 
 onMounted(async () => {
   const response = await window.BoMixAPI.sendAction("get-app-version");
@@ -92,7 +88,7 @@ onMounted(async () => {
   }
   document.addEventListener("mousemove", handleMouseMove);
   document.addEventListener("mouseup", handleMouseUp);
-  await loadSeriesInfo();
+  await bomix.loadSeriesInfo();
 });
 
 onUnmounted(() => {
@@ -124,7 +120,6 @@ const linksList = [
 
 const showConfig = ref(false);
 const showEditSeries = ref(false);
-const seriesInfo = ref({ name: "", note: "" });
 
 function startResize(e) {
   if (e.target.classList.contains("resize-handle")) {
@@ -152,20 +147,6 @@ function toggleSidebarMode() {
 function handleNavigate() {
   if (window.innerWidth < 1024) {
     sidebarWidth.value = MINI_WIDTH;
-  }
-}
-
-async function loadSeriesInfo() {
-  try {
-    const response = await window.BoMixAPI.sendAction("get-current-database");
-    if (response.status === "success" && response.content) {
-      seriesInfo.value = {
-        name: response.content.name || "",
-        note: response.content.note || "",
-      };
-    }
-  } catch (error) {
-    console.error("Load series info failed:", error);
   }
 }
 </script>
@@ -254,9 +235,28 @@ async function loadSeriesInfo() {
     gap: 8px;
     margin-right: 16px;
 
+    .series-label {
+      color: #666;
+      font-size: 14px;
+    }
+
     .series-name {
       font-size: 14px;
       color: #666;
+
+      &.no-series {
+        color: #999;
+        font-style: italic;
+      }
+    }
+
+    .series-edit-btn {
+      color: #666;
+      transition: all 0.3s ease;
+
+      &:hover {
+        color: var(--q-primary);
+      }
     }
   }
 }

@@ -1,5 +1,5 @@
 <template>
-  <q-dialog v-model="isOpen" persistent>
+  <q-dialog v-model="isOpen" persistent @keyup.esc="handleEscape">
     <q-card style="min-width: 400px">
       <q-card-section class="row items-center">
         <div class="text-h6">系列設定</div>
@@ -8,6 +8,22 @@
       </q-card-section>
 
       <q-card-section class="q-pt-none">
+        <div class="row items-center">
+          <div class="col">
+            <q-input
+              v-model="seriesInfo.path"
+              label="數據庫路徑"
+              readonly
+              outlined
+              dense
+            >
+              <template v-slot:append>
+                <q-btn flat dense icon="folder" @click="selectDatabaseFile" />
+              </template>
+            </q-input>
+          </div>
+        </div>
+
         <q-input
           v-model="seriesInfo.name"
           label="系列名稱"
@@ -16,6 +32,7 @@
           @update:model-value="handleNameChange"
           outlined
           dense
+          class="q-mt-md"
         />
 
         <q-input
@@ -28,22 +45,6 @@
           outlined
           dense
         />
-
-        <div class="row items-center q-mt-md">
-          <div class="col">
-            <q-input
-              v-model="filePath"
-              label="數據庫路徑"
-              readonly
-              outlined
-              dense
-            >
-              <template v-slot:append>
-                <q-btn flat dense icon="folder" @click="selectDatabaseFile" />
-              </template>
-            </q-input>
-          </div>
-        </div>
       </q-card-section>
 
       <q-card-actions align="right" class="text-primary">
@@ -62,7 +63,9 @@
 <script setup>
 import { ref, computed, watch } from "vue";
 import { Notify } from "quasar";
+import { inject } from "vue";
 
+const bomix = inject("BoMix");
 const props = defineProps({
   modelValue: Boolean,
 });
@@ -70,11 +73,15 @@ const props = defineProps({
 const emit = defineEmits(["update:modelValue"]);
 
 const isOpen = ref(props.modelValue);
-const isEditable = ref(false);
-const filePath = ref("");
 const seriesInfo = ref({
   name: "",
   note: "",
+  path: "",
+});
+
+// 使用 bomix 的 seriesInfo 來判斷是否可編輯
+const isEditable = computed(() => {
+  return !!bomix.getSeriesInfo().value.path;
 });
 
 // 只有當有名稱且可編輯時才能關閉
@@ -99,17 +106,15 @@ watch(isOpen, (val) => {
 // 加載系列信息
 async function loadSeriesInfo() {
   try {
-    const response = await window.BoMixAPI.sendAction("get-current-database");
-    if (response.status === "success" && response.content) {
-      seriesInfo.value = {
-        name: response.content.name || "",
-        note: response.content.note || "",
-      };
-      filePath.value = response.content.path || "";
-      isEditable.value = true;
-    } else {
-      // 沒有已開啟的數據庫，自動開啟選擇對話框
-      isEditable.value = false;
+    await bomix.loadSeriesInfo();
+    const currentSeries = bomix.getSeriesInfo();
+    seriesInfo.value = {
+      name: currentSeries.value.name,
+      note: currentSeries.value.note,
+      path: currentSeries.value.path,
+    };
+
+    if (!currentSeries.value.path) {
       await selectDatabaseFile();
     }
   } catch (error) {
@@ -123,45 +128,25 @@ async function loadSeriesInfo() {
 // 選擇數據庫文件
 async function selectDatabaseFile() {
   try {
-    const response = await window.BoMixAPI.sendAction("select-database");
-    if (response.status === "success" && response.content) {
-      const newDbPath = response.content;
+    const result = await bomix.selectAndOpenDatabase();
+    if (result) {
+      const currentSeries = bomix.getSeriesInfo();
+      seriesInfo.value = {
+        name: currentSeries.value.name,
+        note: currentSeries.value.note,
+        path: currentSeries.value.path,
+      };
 
-      // // 檢查當前是否有已開啟的數據庫
-      // const currentDb = await window.BoMixAPI.sendAction(
-      //   "get-current-database"
-      // );
-
-      // if (currentDb.status === "success" && currentDb.content) {
-      //   // 有已開啟的數據庫，先關閉它
-      //   await window.BoMixAPI.sendAction("close-database");
-      // }
-
-      // 嘗試打開或創建新數據庫
-      const openResult = await window.BoMixAPI.sendAction("open-database", {
-        path: newDbPath,
+      Notify.create({
+        type: "positive",
+        message:
+          result.message || `${currentSeries.value.filename} 數據庫已開啟`,
       });
-
-      if (openResult.status === "success") {
-        // 更新界面顯示
-        filePath.value = openResult.content.path;
-        seriesInfo.value = {
-          name: openResult.content.name || "",
-          note: openResult.content.note || "",
-        };
-        isEditable.value = true;
-
-        // 顯示成功消息
-        Notify.create({
-          type: "positive",
-          message: openResult.message || "數據庫已開啟",
-        });
-      }
     }
   } catch (error) {
     Notify.create({
       type: "negative",
-      message: error.message || "選擇數據庫失敗",
+      message: error.message || `選擇數據庫失敗`,
     });
   }
 }
@@ -171,10 +156,7 @@ async function handleNameChange(value) {
   if (!value || !isEditable.value) return;
 
   try {
-    await window.BoMixAPI.sendAction("update-series", {
-      name: value,
-      note: seriesInfo.value.note,
-    });
+    await bomix.updateSeriesInfo(value, seriesInfo.value.note);
   } catch (error) {
     Notify.create({
       type: "negative",
@@ -188,10 +170,7 @@ async function handleNoteChange(value) {
   if (!isEditable.value) return;
 
   try {
-    await window.BoMixAPI.sendAction("update-series", {
-      name: seriesInfo.value.name,
-      note: value,
-    });
+    await bomix.updateSeriesInfo(seriesInfo.value.name, value);
   } catch (error) {
     Notify.create({
       type: "negative",
@@ -204,5 +183,12 @@ async function handleNoteChange(value) {
 function handleClose() {
   if (!canClose.value) return;
   isOpen.value = false;
+}
+
+// 處理 ESC 鍵
+function handleEscape() {
+  if (canClose.value) {
+    isOpen.value = false;
+  }
 }
 </script>

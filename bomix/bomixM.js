@@ -167,13 +167,12 @@ export class BoMixM {
         case "open-database":
           try {
             const dbPath = data.path;
-            // 嘗試打開現有數據庫
             const db = await this.bomManager.openDatabase(dbPath);
             const seriesInfo = await db.getSeriesInfo();
             return {
               status: "success",
               content: seriesInfo,
-              message: "已開啟現有數據庫",
+              message: `已開啟 ${seriesInfo.filename} 數據庫`,
             };
           } catch (error) {
             // 如果打開失敗，創建新數據庫
@@ -186,8 +185,20 @@ export class BoMixM {
             return {
               status: "success",
               content: seriesInfo,
-              message: "已創建新數據庫",
+              message: `已創建 ${seriesInfo.filename} 數據庫`,
             };
+          }
+
+        case "get-statistics":
+          try {
+            const db = this.bomManager.getCurrentDatabase();
+            if (!db) {
+              return { status: "error", message: "No database is open" };
+            }
+            const stats = await db.getStatistics();
+            return { status: "success", content: stats };
+          } catch (error) {
+            return { status: "error", message: error.message };
           }
 
         default:
