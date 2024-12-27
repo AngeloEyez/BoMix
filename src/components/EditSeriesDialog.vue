@@ -25,6 +25,7 @@
         </div>
 
         <q-input
+          ref="nameInput"
           v-model="seriesInfo.name"
           label="系列名稱"
           :rules="[(val) => !!val || '請輸入系列名稱']"
@@ -61,7 +62,7 @@
 </template>
 
 <script setup>
-import { ref, computed, watch } from "vue";
+import { ref, computed, watch, nextTick } from "vue";
 import { Notify } from "quasar";
 import { inject } from "vue";
 
@@ -78,6 +79,8 @@ const seriesInfo = ref({
   note: "",
   path: "",
 });
+
+const nameInput = ref(null);
 
 // 使用 bomix 的 seriesInfo 來判斷是否可編輯
 const isEditable = computed(() => {
@@ -142,6 +145,12 @@ async function selectDatabaseFile() {
         message:
           result.message || `${currentSeries.value.filename} 數據庫已開啟`,
       });
+
+      if (!currentSeries.value.name) {
+        nextTick(() => {
+          nameInput.value?.focus();
+        });
+      }
     }
   } catch (error) {
     Notify.create({

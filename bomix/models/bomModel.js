@@ -24,7 +24,9 @@ export class BomModel {
   async #createIndexes() {
     // 為組合鍵創建索引
     await this.#db.ensureIndex({ fieldName: "mfgpnKey" });
-    await this.#db.ensureIndex({ fieldName: "projectId" });
+    await this.#db.ensureIndex({ fieldName: "project" });
+    await this.#db.ensureIndex({ fieldName: "version" });
+    await this.#db.ensureIndex({ fieldName: "phase" });
     log.log("Database indexes created");
   }
 
@@ -65,36 +67,54 @@ export class BomModel {
   async getSeriesInfo() {
     if (!this.#seriesInfo) {
       this.#seriesInfo = await this.#db.findOne({ type: "series" });
-      if (this.#seriesInfo && !this.#seriesInfo.path) {
+    }
+
+    // 如果沒有找到 series 信息，創建一個空的對象
+    if (!this.#seriesInfo) {
+      this.#seriesInfo = {
+        type: "series",
+        name: "",
+        note: "",
+        path: this.#dbPath,
+        filename: path.parse(this.#dbPath).name,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      };
+    } else {
+      // 確保現有的 seriesInfo 有完整的路徑信息
+      if (!this.#seriesInfo.path) {
         this.#seriesInfo.path = this.#dbPath;
       }
-      this.#seriesInfo.filename = path.parse(this.#dbPath).name;
+      if (!this.#seriesInfo.filename) {
+        this.#seriesInfo.filename = path.parse(this.#dbPath).name;
+      }
     }
+
     return this.#seriesInfo;
   }
 
-  // Project 操作
-  async findExistingProject(projectData) {
+  // BOM 操作
+  async findExistingBOM(bomData) {
     try {
       return await this.#db.findOne({
-        type: "project",
-        name: projectData.name,
-        phase: projectData.phase,
-        bomVersion: projectData.bomVersion,
+        type: "bom",
+        project: bomData.project,
+        phase: bomData.phase,
+        version: bomData.version,
       });
     } catch (error) {
-      log.error("Failed to find existing project:", error);
+      log.error("Failed to find existing BOM:", error);
       throw error;
     }
   }
 
-  async updateProject(projectId, projectData) {
+  async updateBOM(bomId, bomData) {
     try {
-      const updatedProject = await this.#db.update(
-        { _id: projectId },
+      const updatedBOM = await this.#db.update(
+        { _id: bomId },
         {
           $set: {
-            ...projectData,
+            ...bomData,
             updatedAt: new Date(),
           },
         },
@@ -102,48 +122,48 @@ export class BomModel {
       );
 
       // 刪除舊的 groups
-      await this.#db.remove({ type: "group", projectId }, { multi: true });
+      await this.#db.remove({ type: "group", bomId }, { multi: true });
 
-      log.log("Project updated:", updatedProject);
-      return updatedProject;
+      log.log("BOM updated:", updatedBOM);
+      return updatedBOM;
     } catch (error) {
-      log.error("Failed to update project:", error);
+      log.error("Failed to update BOM:", error);
       throw error;
     }
   }
 
-  async createProject(projectData) {
+  async createBOM(bomData) {
     try {
-      // 檢查是否存在相同的 project
-      const existingProject = await this.findExistingProject(projectData);
-      if (existingProject) {
-        return await this.updateProject(existingProject._id, projectData);
+      // 檢查是否存在相同的 BOM
+      const existingBOM = await this.findExistingBOM(bomData);
+      if (existingBOM) {
+        return await this.updateBOM(existingBOM._id, bomData);
       }
 
-      const project = {
-        type: "project",
-        name: projectData.name,
-        description: projectData.description,
-        pcapn: projectData.pcapn,
-        bomVersion: projectData.bomVersion,
-        phase: projectData.phase,
-        date: projectData.date || new Date(),
-        filename: projectData.filename || "",
+      const bom = {
+        type: "bom",
+        project: bomData.project,
+        description: bomData.description,
+        pcapn: bomData.pcapn,
+        version: bomData.version,
+        phase: bomData.phase,
+        date: bomData.date || new Date(),
+        filename: bomData.filename || "",
         createdAt: new Date(),
-        //updatedAt: new Date(),
+        updatedAt: new Date(),
       };
 
-      const savedProject = await this.#db.insert(project);
-      log.log("Project created:", savedProject);
-      return savedProject;
+      const savedBOM = await this.#db.insert(bom);
+      log.log("BOM created:", savedBOM);
+      return savedBOM;
     } catch (error) {
-      log.error("Failed to create project:", error);
+      log.error("Failed to create BOM:", error);
       throw error;
     }
   }
 
   // Group 操作
-  async createGroup(projectId, groupData) {
+  async createGroup(bomId, groupData) {
     try {
       // 創建 group key (主源的 MFG+MFGPN)
       const mainPart = groupData.parts.find((p) => p.isMain);
@@ -153,7 +173,7 @@ export class BomModel {
 
       const group = {
         type: "group",
-        projectId,
+        bomId,
         process: groupData.process,
         item: groupData.item || "",
         qty: groupData.qty || "",
@@ -182,31 +202,31 @@ export class BomModel {
   }
 
   // 查詢方法
-  async getProjectById(projectId) {
-    return await this.#db.findOne({ type: "project", _id: projectId });
+  async getBOMById(bomId) {
+    return await this.#db.findOne({ type: "bom", _id: bomId });
   }
 
-  async getAllProjects() {
-    return await this.#db.find({ type: "project" }).sort({ createdAt: -1 });
+  async getAllBOMs() {
+    return await this.#db.find({ type: "bom" }).sort({ createdAt: -1 });
   }
 
-  async getGroupsByProjectId(projectId) {
-    return await this.#db.find({ type: "group", projectId });
+  async getGroupsByBOMId(bomId) {
+    return await this.#db.find({ type: "group", bomId });
   }
 
   async findGroupByMfgpnKey(mfgpnKey) {
     return await this.#db.findOne({ type: "group", mfgpnKey });
   }
 
-  // 完整的項目 BOM 數據
-  async getFullProjectBOM(projectId) {
-    const project = await this.getProjectById(projectId);
-    if (!project) return null;
+  // 完整的 BOM 數據
+  async getFullBOM(bomId) {
+    const bom = await this.getBOMById(bomId);
+    if (!bom) return null;
 
-    const groups = await this.getGroupsByProjectId(projectId);
+    const groups = await this.getGroupsByBOMId(bomId);
 
     return {
-      ...project,
+      ...bom,
       groups,
     };
   }
@@ -232,7 +252,16 @@ export class BomModel {
   async updateSeriesInfo(seriesData) {
     try {
       if (!this.#seriesInfo) {
-        throw new Error("Series info not initialized");
+        // 如果沒有初始化，則創建一個新的
+        this.#seriesInfo = {
+          type: "series",
+          name: "",
+          note: "",
+          path: this.#dbPath,
+          filename: path.parse(this.#dbPath).name,
+          createdAt: new Date(),
+          updatedAt: new Date(),
+        };
       }
 
       const updatedSeries = await this.#db.update(
@@ -240,10 +269,12 @@ export class BomModel {
         {
           $set: {
             ...seriesData,
+            path: this.#dbPath,
+            filename: path.parse(this.#dbPath).name,
             updatedAt: new Date(),
           },
         },
-        { returnUpdatedDocs: true }
+        { returnUpdatedDocs: true, upsert: true }
       );
 
       // 更新快取的系列資訊
@@ -259,18 +290,18 @@ export class BomModel {
 
   async getStatistics() {
     try {
-      // 獲取所有專案
-      const projects = await this.#db.find({ type: "project" });
+      // 獲取所有 BOM
+      const boms = await this.#db.find({ type: "bom" });
 
       // 計算不重複的專案名稱數量
-      const uniqueProjects = new Set(projects.map((p) => p.name));
+      const uniqueProjects = new Set(boms.map((b) => b.project));
 
       // 計算不重複的階段數量
-      const uniquePhases = new Set(projects.map((p) => p.phase));
+      const uniquePhases = new Set(boms.map((b) => b.phase));
 
-      // 計算 BOM 總數（使用 project_phase_bomVersion 組合）
+      // 計算 BOM 總數
       const bomCount = new Set(
-        projects.map((p) => `${p.name}_${p.phase}_${p.bomVersion}`)
+        boms.map((b) => `${b.project}_${b.phase}_${b.version}`)
       );
 
       return {

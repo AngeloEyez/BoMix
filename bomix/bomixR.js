@@ -51,12 +51,15 @@ export class BoMixR {
         name,
         note,
       });
-      if (response.status === "success") {
+      if (response.status === "success" && response.content) {
         this.#seriesInfo.value = {
           name: response.content.name,
           note: response.content.note,
           path: response.content.path,
+          filename: response.content.filename,
         };
+      } else {
+        throw new Error(response.message || "更新系列信息失敗");
       }
     } catch (error) {
       log.error("Update series info failed:", error);
@@ -301,10 +304,10 @@ export class BoMixR {
       // 從 SMD sheet 中提取項目信息
       const smdSheet = workbook.Sheets["SMD"];
       const projectInfo = {
-        name: this.#extractProjectInfo(smdSheet, "B3", "Product Code:"),
+        project: this.#extractProjectInfo(smdSheet, "B3", "Product Code:"),
         description: this.#extractProjectInfo(smdSheet, "B4", "Description:"),
         pcapn: this.#extractProjectInfo(smdSheet, "F4", "PCA PN:"),
-        bomVersion: this.#extractProjectInfo(smdSheet, "H3", "BOM Version:"),
+        version: this.#extractProjectInfo(smdSheet, "H3", "BOM Version:"),
         phase: this.#extractProjectInfo(smdSheet, "J3", "Phase:"),
         date: this.#extractProjectInfo(smdSheet, "H4", "Date:"),
         filename: filename,
@@ -356,10 +359,10 @@ export class BoMixR {
     try {
       return {
         project: {
-          name: "Matrix BOM Project",
+          project: "Matrix BOM Project",
           description: "Parsed from Matrix BOM format",
           pcapn: "TBD",
-          bomVersion: "1.0",
+          version: "1.0",
           phase: "EVT",
           date: new Date(),
         },

@@ -43,11 +43,11 @@ const initializeLogLevels = () => {
     }
 
     // 輸出當前日誌級別設置
-    console.log("Log levels configured:", {
-      console: log.transports.console?.level,
-      file: log.transports.file?.level,
-      ipc: log.transports.ipc?.level,
-    });
+    // console.log("Log levels configured:", {
+    //   console: log.transports.console?.level,
+    //   file: log.transports.file?.level,
+    //   ipc: log.transports.ipc?.level,
+    // });
   } catch (error) {
     console.error("Error initializing log levels:", error);
   }

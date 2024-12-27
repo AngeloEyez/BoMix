@@ -111,18 +111,18 @@ export class BoMixM {
               throw new Error("No database is currently open");
             }
 
-            // 創建或更新項目
-            const project = await db.createProject(data.project);
+            // 創建或更新 BOM
+            const bom = await db.createBOM(data.project);
 
-            // 創建所有組
+            // 創建所有 groups
             for (const groupData of data.groups) {
-              await db.createGroup(project._id, groupData);
+              await db.createGroup(bom._id, groupData);
             }
 
             return {
               status: "success",
-              content: await db.getFullProjectBOM(project._id),
-              message: project.updatedAt ? "專案已更新" : "專案已創建",
+              content: bom,
+              message: "BOM data imported successfully",
             };
           } catch (error) {
             return { status: "error", message: error.message };
@@ -197,6 +197,18 @@ export class BoMixM {
             }
             const stats = await db.getStatistics();
             return { status: "success", content: stats };
+          } catch (error) {
+            return { status: "error", message: error.message };
+          }
+
+        case "get-full-bom":
+          try {
+            const db = this.bomManager.getCurrentDatabase();
+            if (!db) {
+              throw new Error("No database is currently open");
+            }
+            const fullBOM = await db.getFullBOM(data.bomId);
+            return { status: "success", content: fullBOM };
           } catch (error) {
             return { status: "error", message: error.message };
           }
