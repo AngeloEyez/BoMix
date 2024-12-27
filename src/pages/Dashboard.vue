@@ -45,13 +45,13 @@
         </div>
       </div>
     </div>
-    <ExcelDropZone />
+    <DashboardBOMTable />
     <EditSeriesDialog v-model="showEditSeries" />
   </q-page>
 </template>
 
 <script setup>
-import ExcelDropZone from "src/components/ExcelDropZone.vue";
+import DashboardBOMTable from "src/components/DashboardBOMTable.vue";
 import EditSeriesDialog from "components/EditSeriesDialog.vue";
 import { inject, onMounted, ref } from "vue";
 
@@ -78,7 +78,7 @@ onMounted(async () => {
 });
 
 defineOptions({
-  name: "IndexPage",
+  name: "Dash-Board",
 });
 </script>
 
