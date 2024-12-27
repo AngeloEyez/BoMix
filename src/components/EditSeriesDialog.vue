@@ -48,7 +48,7 @@
         />
       </q-card-section>
 
-      <q-card-actions align="right" class="text-primary">
+      <!-- <q-card-actions align="right" class="text-primary">
         <q-btn
           flat
           label="確定"
@@ -56,7 +56,7 @@
           :disable="!canClose"
           @click="handleClose"
         />
-      </q-card-actions>
+      </q-card-actions> -->
     </q-card>
   </q-dialog>
 </template>
@@ -87,9 +87,12 @@ const isEditable = computed(() => {
   return !!bomix.getSeriesInfo().value.path;
 });
 
-// 只有當有名稱且可編輯時才能關閉
+// 只有當沒有開啟資料庫，或者有開啟資料庫且有名稱時才能關閉
 const canClose = computed(() => {
-  return isEditable.value && !!seriesInfo.value.name;
+  return (
+    !seriesInfo.value.path ||
+    (!!seriesInfo.value.path && !!seriesInfo.value.name)
+  );
 });
 
 watch(

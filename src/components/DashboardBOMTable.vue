@@ -154,10 +154,37 @@ async function loadBOMList() {
   }
 }
 
-const handleDrop = async (event) => {
-  const files = event.dataTransfer.files;
+async function handleDrop(event) {
+  // 保存拖放的文件
+  const droppedFiles = event.dataTransfer.files;
 
-  for (const file of files) {
+  // 如果沒有 series path，先打開對話框
+  if (!seriesInfo.value.path) {
+    showEditSeries.value = true;
+    // 等待對話框關閉
+    await new Promise((resolve) => {
+      const unwatch = watch(showEditSeries, async (newVal) => {
+        if (!newVal) {
+          // 對話框關閉
+          unwatch(); // 停止監聽
+          // 確認是否有 path
+          if (seriesInfo.value.path) {
+            resolve();
+          } else {
+            Notify.create({
+              type: "warning",
+              message: "未選擇數據庫，取消導入",
+            });
+          }
+        }
+      });
+    });
+  }
+
+  // 確認有 path 後才處理文件
+  if (!seriesInfo.value.path) return;
+
+  for (const file of droppedFiles) {
     try {
       if (file.name.endsWith(".xls") || file.name.endsWith(".xlsx")) {
         await bomix.importBOMfromXLS(file);
@@ -173,15 +200,6 @@ const handleDrop = async (event) => {
         });
       }
     } catch (error) {
-      if (error.message === "NO_DATABASE") {
-        Notify.create({
-          type: "warning",
-          message: "請先選擇或創建一個 Series 數據庫",
-          timeout: 3000,
-        });
-        showEditSeries.value = true;
-        return;
-      }
       Notify.create({
         type: "negative",
         message: error.message || "導入失敗",
@@ -189,7 +207,7 @@ const handleDrop = async (event) => {
       });
     }
   }
-};
+}
 
 function confirmDelete() {
   if (selected.value.length > 0) {
