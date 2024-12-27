@@ -79,6 +79,7 @@ const seriesInfo = ref({
   note: "",
   path: "",
 });
+const isSelectingFile = ref(false);
 
 const nameInput = ref(null);
 
@@ -88,10 +89,12 @@ const isEditable = computed(() => {
 });
 
 // 只有當沒有開啟資料庫，或者有開啟資料庫且有名稱時才能關閉
+// 且不在選擇檔案時才能關閉
 const canClose = computed(() => {
   return (
-    !seriesInfo.value.path ||
-    (!!seriesInfo.value.path && !!seriesInfo.value.name)
+    !isSelectingFile.value &&
+    (!seriesInfo.value.path ||
+      (!!seriesInfo.value.path && !!seriesInfo.value.name))
   );
 });
 
@@ -134,7 +137,10 @@ async function loadSeriesInfo() {
 // 選擇數據庫文件
 async function selectDatabaseFile() {
   try {
+    isSelectingFile.value = true;
     const result = await bomix.selectAndOpenDatabase();
+    isSelectingFile.value = false;
+
     if (result) {
       const currentSeries = bomix.getSeriesInfo();
       seriesInfo.value = {
@@ -160,6 +166,7 @@ async function selectDatabaseFile() {
       type: "negative",
       message: error.message || `選擇數據庫失敗`,
     });
+    isSelectingFile.value = false;
   }
 }
 
