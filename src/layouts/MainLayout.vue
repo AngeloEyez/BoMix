@@ -154,6 +154,10 @@ function handleNavigate() {
 <style lang="scss">
 .main-layout {
   background-color: #f5f5f5;
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
 
   .header-toolbar {
     height: 64px;
@@ -227,6 +231,8 @@ function handleNavigate() {
   .content-container {
     background-color: #f5f5f5;
     transition: margin-left 0.3s ease, width 0.3s ease;
+    height: calc(100vh - 64px);
+    overflow: hidden;
   }
 
   .series-info {

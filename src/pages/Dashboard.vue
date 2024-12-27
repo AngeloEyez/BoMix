@@ -45,7 +45,9 @@
         </div>
       </div>
     </div>
-    <DashboardBOMTable />
+    <div class="table-container">
+      <DashboardBOMTable />
+    </div>
     <EditSeriesDialog v-model="showEditSeries" />
   </q-page>
 </template>
@@ -53,11 +55,25 @@
 <script setup>
 import DashboardBOMTable from "src/components/DashboardBOMTable.vue";
 import EditSeriesDialog from "components/EditSeriesDialog.vue";
-import { inject, onMounted, ref } from "vue";
+import { inject, onMounted, ref, watch } from "vue";
+import { useQuasar } from "quasar";
 
 const bomix = inject("BoMix");
 const statistics = bomix.getStatistics();
 const showEditSeries = ref(false);
+const seriesInfo = bomix.getSeriesInfo();
+
+// 監聽 series 變化
+watch(
+  () => seriesInfo.value.path,
+  async (newPath) => {
+    if (newPath) {
+      await bomix.updateStatistics();
+    } else {
+      // 如果沒有開啟的 series，清空列表
+    }
+  }
+);
 
 // 格式化當前時間
 const currentTime = ref(formatCurrentTime());
@@ -74,6 +90,7 @@ function formatCurrentTime() {
 }
 
 onMounted(async () => {
+  await bomix.loadSeriesInfo();
   await bomix.updateStatistics();
 });
 
@@ -84,13 +101,23 @@ defineOptions({
 
 <style lang="scss" scoped>
 .index-page {
-  min-height: 100%;
   background: #f5f5f5;
-  padding: 20px;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  overflow: hidden;
 }
 
 .statistics-container {
-  margin-bottom: 40px;
+  margin-bottom: 16px;
+  flex-shrink: 0;
+}
+
+.table-container {
+  flex: 1;
+  overflow: hidden;
+  width: 100%;
 }
 
 .stat-card {

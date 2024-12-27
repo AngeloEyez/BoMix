@@ -193,7 +193,7 @@ export class BomModel {
 
       const savedGroup = await this.#db.insert(group);
 
-      log.debug("Group created:", savedGroup);
+      //log.debug("Group created:", savedGroup);
       return savedGroup;
     } catch (error) {
       log.error("Failed to create group:", error);
@@ -311,6 +311,38 @@ export class BomModel {
       };
     } catch (error) {
       log.error("Get statistics failed:", error);
+      throw error;
+    }
+  }
+
+  // 查詢方法
+  async getAllBOMsWithoutGroups() {
+    try {
+      return await this.#db.find({ type: "bom" }).sort({ createdAt: -1 });
+    } catch (error) {
+      log.error("Failed to get all BOMs:", error);
+      throw error;
+    }
+  }
+
+  async deleteBOMs(bomIds) {
+    try {
+      // 刪除指定的 BOM 記錄
+      const deleteResult = await this.#db.remove(
+        { type: "bom", _id: { $in: bomIds } },
+        { multi: true }
+      );
+
+      // 刪除相關的 groups
+      await this.#db.remove(
+        { type: "group", bomId: { $in: bomIds } },
+        { multi: true }
+      );
+
+      log.log(`Deleted ${deleteResult} BOMs and their groups`);
+      return deleteResult;
+    } catch (error) {
+      log.error("Failed to delete BOMs:", error);
       throw error;
     }
   }

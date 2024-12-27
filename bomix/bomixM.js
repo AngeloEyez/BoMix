@@ -213,6 +213,30 @@ export class BoMixM {
             return { status: "error", message: error.message };
           }
 
+        case "get-bom-list":
+          try {
+            const db = this.bomManager.getCurrentDatabase();
+            if (!db) {
+              return { status: "error", message: "No database is open" };
+            }
+            const boms = await db.getAllBOMsWithoutGroups();
+            return { status: "success", content: boms };
+          } catch (error) {
+            return { status: "error", message: error.message };
+          }
+
+        case "delete-boms":
+          try {
+            const db = this.bomManager.getCurrentDatabase();
+            if (!db) {
+              return { status: "error", message: "No database is open" };
+            }
+            await db.deleteBOMs(data.ids);
+            return { status: "success", message: "BOMs deleted successfully" };
+          } catch (error) {
+            return { status: "error", message: error.message };
+          }
+
         default:
           throw new Error(`Unknown action: ${action}`);
       }
