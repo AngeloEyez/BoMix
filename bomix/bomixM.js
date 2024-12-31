@@ -278,7 +278,6 @@ export class BoMixM {
               }
 
               const workbook = await this.#bomManager.readExcelFile(filePath);
-              //const bomType = this.#bomManager.detectBOMType(workbook);
               const bomData = await this.#bomManager.parseExcelData(
                 workbook,
                 path.basename(filePath)

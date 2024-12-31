@@ -280,7 +280,7 @@ export class BomModel {
       // 更新快取的系列資訊
       this.#seriesInfo = updatedSeries;
 
-      log.log("Series info updated:", updatedSeries);
+      //log.log("Series info updated:", updatedSeries);
       return updatedSeries;
     } catch (error) {
       log.error("Failed to update series info:", error);

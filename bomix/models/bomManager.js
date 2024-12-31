@@ -232,59 +232,8 @@ export class BomManager {
       const sheets = ["SMD", "PTH"];
 
       for (const sheetName of sheets) {
-        const sheet = workbook.Sheets[sheetName];
-        if (!sheet) continue;
-
-        let rowIndex = 6;
-        while (true) {
-          const rowData = this.#getRowData(sheet, rowIndex);
-          if (!rowData[0]) break;
-
-          const group = {
-            process: sheetName,
-            item: rowData[0] || "",
-            qty: rowData[1] || "",
-            location: rowData[2] || "",
-            ccl: rowData[3] || "",
-            parts: [
-              {
-                hhpn: rowData[4] || "",
-                description: rowData[5] || "",
-                mfg: rowData[6] || "",
-                mfgpn: rowData[7] || "",
-                isMain: true,
-              },
-            ],
-          };
-
-          for (let i = 8; i < rowData.length; i += 3) {
-            if (rowData[i] && rowData[i + 1] && rowData[i + 2]) {
-              group.parts.push({
-                mfg: rowData[i] || "",
-                mfgpn: rowData[i + 1] || "",
-                description: rowData[i + 2] || "",
-                isMain: false,
-              });
-            }
-          }
-
-          groups.push(group);
-          rowIndex++;
-        }
+        console.log(sheetName);
       }
-
-      return {
-        project: {
-          project: path.parse(filename).name,
-          description: "Parsed from Matrix BOM format",
-          pcapn: "TBD",
-          version: "1.0",
-          phase: "EVT",
-          date: new Date(),
-          filename: filename,
-        },
-        groups: groups,
-      };
     } catch (error) {
       log.error("Parse Matrix BOM failed:", error);
       throw error;
