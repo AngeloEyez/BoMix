@@ -2,6 +2,7 @@ import log from "./utils/logger";
 import * as XLSX from "xlsx";
 import { ref } from "vue";
 
+
 export class BoMixR {
   #seriesInfo;
   #statistics;
