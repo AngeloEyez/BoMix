@@ -229,11 +229,28 @@ export class BomManager {
   async #parseMatrixBOM(workbook, filename) {
     try {
       const groups = [];
-      const sheets = ["SMD", "PTH"];
+      const sheets = ["SMD", "PTH", "BOTTOM"];
 
       for (const sheetName of sheets) {
         console.log(sheetName);
       }
+
+      // 從 SMD sheet 中提取項目信息
+      const smdSheet = workbook.Sheets["SMD"];
+      const projectInfo = {
+        project: this.#extractProjectInfo(smdSheet, "B3", "Product Code:"),
+        description: this.#extractProjectInfo(smdSheet, "B4", "Description:"),
+        pcapn: this.#extractProjectInfo(smdSheet, "F4", "PCA PN:"),
+        version: this.#extractProjectInfo(smdSheet, "H3", "BOM Version:"),
+        phase: this.#extractProjectInfo(smdSheet, "J3", "Phase:"),
+        date: this.#extractProjectInfo(smdSheet, "H4", "Date:"),
+        filename: filename,
+      };
+
+      return {
+        project: projectInfo,
+        groups: groups,
+      };
     } catch (error) {
       log.error("Parse Matrix BOM failed:", error);
       throw error;
