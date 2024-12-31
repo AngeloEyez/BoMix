@@ -193,7 +193,7 @@ export class BomModel {
 
       const savedGroup = await this.#db.insert(group);
 
-      //log.debug("Group created:", savedGroup);
+      //log.log("Group created:", savedGroup);
       return savedGroup;
     } catch (error) {
       log.error("Failed to create group:", error);

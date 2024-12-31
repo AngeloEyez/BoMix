@@ -1,18 +1,18 @@
 import { app, ipcMain, dialog } from "electron";
 import Datastore from "nedb-promises";
-import log from "app/bomix/utils/logger";
 import path from "path";
 import { ConfigManager } from "./utils/configManager";
 import pkg from "../package.json";
 import { BomManager } from "./models/bomManager";
+import log from "./utils/logger";
 
 export class BoMixM {
-  configManager;
-  bomManager;
+  #bomManager;
+  #configManager;
 
   constructor() {
-    this.configManager = new ConfigManager();
-    this.bomManager = new BomManager(this.configManager);
+    this.#configManager = new ConfigManager();
+    this.#bomManager = new BomManager(this.#configManager);
     this.#setupIpcHandlers();
     this.#setupAppHandlers(); //應用程序級別的事件
     log.log("BoMixR initialized");
@@ -26,7 +26,7 @@ export class BoMixM {
         log.log("Application is closing, cleaning up...");
 
         // 關閉當前數據庫
-        await this.bomManager.closeCurrentDatabase();
+        await this.#bomManager.closeCurrentDatabase();
 
         log.log("Cleanup completed, now quitting...");
         app.exit(0); // 正常退出
@@ -40,7 +40,7 @@ export class BoMixM {
     app.on("render-process-gone", async (event, webContents, details) => {
       log.error("Renderer process crashed:", details);
       try {
-        await this.bomManager.closeCurrentDatabase();
+        await this.#bomManager.closeCurrentDatabase();
       } catch (error) {
         log.error("Error closing database after crash:", error);
       }
@@ -50,7 +50,7 @@ export class BoMixM {
     process.on("uncaughtException", async (error) => {
       log.error("Uncaught exception:", error);
       try {
-        await this.bomManager.closeCurrentDatabase();
+        await this.#bomManager.closeCurrentDatabase();
         app.exit(1);
       } catch (closeError) {
         log.error(
@@ -68,16 +68,14 @@ export class BoMixM {
    * @returns
    */
   #setupIpcHandlers() {
-    ipcMain.handle("BoMix-action", async (_event, args) => {
-      const { action, data } = args;
-
+    ipcMain.handle("BoMix-action", async (event, { action, data }) => {
       switch (action) {
         case "get-app-version":
           return { status: "success", content: pkg.version };
 
         case "get-current-database":
           try {
-            const currentDb = this.bomManager.getCurrentDatabase();
+            const currentDb = this.#bomManager.getCurrentDatabase();
             if (currentDb) {
               const seriesInfo = await currentDb.getSeriesInfo();
               return { status: "success", content: seriesInfo };
@@ -89,12 +87,12 @@ export class BoMixM {
           }
 
         case "select-database":
-          const dbPath = await this.bomManager.selectOrCreateDatabase();
+          const dbPath = await this.#bomManager.selectOrCreateDatabase();
           return { status: "success", content: dbPath };
 
         case "init-database":
           try {
-            const db = await this.bomManager.initDatabase(
+            const db = await this.#bomManager.initDatabase(
               data.path,
               data.seriesName,
               data.seriesNote
@@ -106,7 +104,7 @@ export class BoMixM {
 
         case "import-bom-data":
           try {
-            const db = this.bomManager.getCurrentDatabase();
+            const db = this.#bomManager.getCurrentDatabase();
             if (!db) {
               throw new Error("No database is currently open");
             }
@@ -131,13 +129,13 @@ export class BoMixM {
         case "get-config":
           return {
             status: "success",
-            content: this.configManager.getConfig(),
+            content: this.#configManager.getConfig(),
           };
 
         case "update-config":
           try {
             log.log(data);
-            const updatedConfig = this.configManager.updateConfig(data);
+            const updatedConfig = this.#configManager.updateConfig(data);
             return { status: "success", content: updatedConfig };
           } catch (error) {
             log.log(error);
@@ -146,7 +144,7 @@ export class BoMixM {
 
         case "update-series":
           try {
-            const db = this.bomManager.getCurrentDatabase();
+            const db = this.#bomManager.getCurrentDatabase();
             if (!db) {
               throw new Error("No database is currently open");
             }
@@ -158,7 +156,7 @@ export class BoMixM {
 
         case "close-database":
           try {
-            await this.bomManager.closeCurrentDatabase();
+            await this.#bomManager.closeCurrentDatabase();
             return { status: "success" };
           } catch (error) {
             return { status: "error", message: error.message };
@@ -167,7 +165,7 @@ export class BoMixM {
         case "open-database":
           try {
             const dbPath = data.path;
-            const db = await this.bomManager.openDatabase(dbPath);
+            const db = await this.#bomManager.openDatabase(dbPath);
             const seriesInfo = await db.getSeriesInfo();
             return {
               status: "success",
@@ -176,7 +174,7 @@ export class BoMixM {
             };
           } catch (error) {
             // 如果打開失敗，創建新數據庫
-            const db = await this.bomManager.initDatabase(
+            const db = await this.#bomManager.initDatabase(
               data.path,
               "New Series",
               ""
@@ -191,7 +189,7 @@ export class BoMixM {
 
         case "get-statistics":
           try {
-            const db = this.bomManager.getCurrentDatabase();
+            const db = this.#bomManager.getCurrentDatabase();
             if (!db) {
               return { status: "error", message: "No database is open" };
             }
@@ -203,7 +201,7 @@ export class BoMixM {
 
         case "get-full-bom":
           try {
-            const db = this.bomManager.getCurrentDatabase();
+            const db = this.#bomManager.getCurrentDatabase();
             if (!db) {
               throw new Error("No database is currently open");
             }
@@ -215,7 +213,7 @@ export class BoMixM {
 
         case "get-bom-list":
           try {
-            const db = this.bomManager.getCurrentDatabase();
+            const db = this.#bomManager.getCurrentDatabase();
             if (!db) {
               return { status: "error", message: "No database is open" };
             }
@@ -227,13 +225,80 @@ export class BoMixM {
 
         case "delete-boms":
           try {
-            const db = this.bomManager.getCurrentDatabase();
+            const db = this.#bomManager.getCurrentDatabase();
             if (!db) {
               return { status: "error", message: "No database is open" };
             }
             await db.deleteBOMs(data.ids);
             return { status: "success", message: "BOMs deleted successfully" };
           } catch (error) {
+            return { status: "error", message: error.message };
+          }
+
+        case "import-excel-files":
+          try {
+            const db = this.#bomManager.getCurrentDatabase();
+            if (!db) {
+              return { status: "error", message: "NO_DATABASE" };
+            }
+
+            let filesToProcess = [];
+
+            // 如果沒有有效的文件數據，打開文件選擇對話框
+            if (
+              !data.files ||
+              !Array.isArray(data.files) ||
+              data.files.length === 0
+            ) {
+              const result = await dialog.showOpenDialog({
+                properties: ["openFile", "multiSelections"],
+                filters: [
+                  {
+                    name: "Excel Files",
+                    extensions: ["xls", "xlsx"],
+                  },
+                ],
+                title: "選擇 Excel BOM 文件",
+              });
+
+              if (result.canceled) {
+                return { status: "canceled", message: "Operation cancelled" };
+              }
+
+              filesToProcess = result.filePaths.map((path) => ({ path }));
+            } else {
+              filesToProcess = data.files;
+            }
+
+            for (const file of filesToProcess) {
+              const filePath = file.path;
+              if (!filePath) {
+                log.error("Invalid file path:", filePath);
+                continue;
+              }
+
+              const workbook = await this.#bomManager.readExcelFile(filePath);
+              //const bomType = this.#bomManager.detectBOMType(workbook);
+              const bomData = await this.#bomManager.parseExcelData(
+                workbook,
+                path.basename(filePath)
+              );
+
+              // 創建或更新 BOM
+              const bom = await db.createBOM(bomData.project);
+
+              // 創建所有 groups
+              for (const groupData of bomData.groups) {
+                await db.createGroup(bom._id, groupData);
+              }
+            }
+
+            return {
+              status: "success",
+              message: "BOM files imported successfully",
+            };
+          } catch (error) {
+            log.error("Import Excel files failed:", error);
             return { status: "error", message: error.message };
           }
 

@@ -13,6 +13,19 @@
       >
         <q-tooltip>刪除選中的 BOM</q-tooltip>
       </q-btn>
+
+      <q-btn
+        flat
+        round
+        dense
+        icon="upload_file"
+        class="action-btn"
+        :class="{ disabled: !hasSeries }"
+        :disable="!hasSeries"
+        @click="import_excel_files()"
+      >
+        <q-tooltip>導入 Excel BOM</q-tooltip>
+      </q-btn>
     </div>
     <q-table
       class="bom-table"
@@ -85,18 +98,29 @@ const selected = ref([]);
 const showDeleteConfirm = ref(false);
 const bomList = ref([]);
 const seriesInfo = bomix.getSeriesInfo();
+const hasSeries = ref(false);
+
+// 初始化 seriesInfo
+onMounted(async () => {
+  await bomix.loadSeriesInfo();
+  hasSeries.value = !!seriesInfo.value.path;
+  await loadBOMList();
+});
 
 // 監聽 series 變化
 watch(
   () => seriesInfo.value.path,
   async (newPath) => {
     if (newPath) {
+      hasSeries.value = true;
       await loadBOMList();
     } else {
+      hasSeries.value = false;
       bomList.value = [];
       selected.value = [];
     }
-  }
+  },
+  { immediate: true }
 );
 
 const columns = [
@@ -155,8 +179,25 @@ async function loadBOMList() {
 }
 
 async function handleDrop(event) {
-  // 保存拖放的文件
-  const droppedFiles = event.dataTransfer.files;
+  let excelFiles = [];
+  for (const f of event.dataTransfer.files) {
+    if (f.name.endsWith(".xls") || f.name.endsWith(".xlsx"))
+      excelFiles.push({
+        path: window.BoMixAPI.getFilePath(f),
+        name: f.name,
+        type: f.type,
+        size: f.size,
+      });
+    console.log("File Path of dragged files: ", f.path);
+  }
+
+  if (excelFiles.length === 0) {
+    Notify.create({
+      type: "warning",
+      message: "沒有可導入的 Excel 文件",
+    });
+    return;
+  }
 
   // 如果沒有 series path，先打開對話框
   if (!seriesInfo.value.path) {
@@ -165,9 +206,7 @@ async function handleDrop(event) {
     await new Promise((resolve) => {
       const unwatch = watch(showEditSeries, async (newVal) => {
         if (!newVal) {
-          // 對話框關閉
-          unwatch(); // 停止監聽
-          // 確認是否有 path
+          unwatch();
           if (seriesInfo.value.path) {
             resolve();
           } else {
@@ -181,31 +220,35 @@ async function handleDrop(event) {
     });
   }
 
-  // 確認有 path 後才處理文件
   if (!seriesInfo.value.path) return;
 
-  for (const file of droppedFiles) {
-    try {
-      if (file.name.endsWith(".xls") || file.name.endsWith(".xlsx")) {
-        await bomix.importBOMfromXLS(file);
-        await loadBOMList();
-        Notify.create({
-          type: "positive",
-          message: `成功導入 ${file.name}`,
-        });
-      } else {
-        Notify.create({
-          type: "warning",
-          message: `跳過非 Excel 檔案: ${file.name}`,
-        });
-      }
-    } catch (error) {
+  await import_excel_files(excelFiles);
+}
+
+async function import_excel_files(excelFiles = []) {
+  try {
+    const response = await window.BoMixAPI.sendAction("import-excel-files", {
+      files: excelFiles,
+    });
+
+    if (response.status === "success") {
+      await loadBOMList();
+      await bomix.updateStatistics();
+      Notify.create({
+        type: "positive",
+        message: "成功導入 BOM 文件",
+      });
+    } else if (response.status === "error") {
       Notify.create({
         type: "negative",
-        message: error.message || "導入失敗",
-        caption: file.name,
+        message: response.message || "導入失敗",
       });
     }
+  } catch (error) {
+    Notify.create({
+      type: "negative",
+      message: error.message || "導入失敗",
+    });
   }
 }
 
@@ -236,10 +279,6 @@ async function deleteBOMs() {
     });
   }
 }
-
-onMounted(async () => {
-  await loadBOMList();
-});
 </script>
 
 <style lang="scss" scoped>
@@ -256,6 +295,8 @@ onMounted(async () => {
     padding: 8px 16px;
     border-bottom: 1px solid #eee;
     flex-shrink: 0;
+    display: flex;
+    gap: 8px;
 
     .action-btn {
       color: #666;

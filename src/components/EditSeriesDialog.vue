@@ -19,6 +19,16 @@
             >
               <template v-slot:append>
                 <q-btn flat dense icon="folder" @click="selectDatabaseFile" />
+                <q-btn
+                  v-if="seriesInfo.path"
+                  flat
+                  dense
+                  icon="close"
+                  class="close-db-btn"
+                  @click="closeDatabase"
+                >
+                  <q-tooltip>關閉數據庫</q-tooltip>
+                </q-btn>
               </template>
             </q-input>
           </div>
@@ -74,29 +84,33 @@ const props = defineProps({
 const emit = defineEmits(["update:modelValue"]);
 
 const isOpen = ref(props.modelValue);
-const seriesInfo = ref({
-  name: "",
-  note: "",
-  path: "",
-});
+const seriesInfo = bomix.getSeriesInfo();
 const isSelectingFile = ref(false);
 
 const nameInput = ref(null);
 
-// 使用 bomix 的 seriesInfo 來判斷是否可編輯
-const isEditable = computed(() => {
-  return !!bomix.getSeriesInfo().value.path;
-});
+// 直接使用 seriesInfo 的 path 值來判斷是否可編輯
+const isEditable = ref(!!seriesInfo.value.path);
 
-// 只有當沒有開啟資料庫，或者有開啟資料庫且有名稱時才能關閉
-// 且不在選擇檔案時才能關閉
-const canClose = computed(() => {
-  return (
-    !isSelectingFile.value &&
-    (!seriesInfo.value.path ||
-      (!!seriesInfo.value.path && !!seriesInfo.value.name))
-  );
-});
+// 監聽 series 變化
+watch(
+  () => seriesInfo.value.path,
+  (newPath) => {
+    isEditable.value = !!newPath;
+  }
+);
+
+// 直接使用 ref 來管理是否可以關閉
+const canClose = ref(true);
+
+// 監聽相關狀態變化來更新 canClose
+watch(
+  [isSelectingFile, () => seriesInfo.value.path, () => seriesInfo.value.name],
+  ([selecting, path, name]) => {
+    canClose.value = !selecting && (!path || (!!path && !!name));
+  },
+  { immediate: true }
+);
 
 watch(
   () => props.modelValue,
@@ -116,14 +130,8 @@ watch(isOpen, (val) => {
 async function loadSeriesInfo() {
   try {
     await bomix.loadSeriesInfo();
-    const currentSeries = bomix.getSeriesInfo();
-    seriesInfo.value = {
-      name: currentSeries.value.name,
-      note: currentSeries.value.note,
-      path: currentSeries.value.path,
-    };
 
-    if (!currentSeries.value.path) {
+    if (!seriesInfo.value.path) {
       await selectDatabaseFile();
     }
   } catch (error) {
@@ -136,26 +144,27 @@ async function loadSeriesInfo() {
 
 // 選擇數據庫文件
 async function selectDatabaseFile() {
+  // 如果是第一次開啟資料庫（之前沒有開啟的資料庫）
+  const hadPreviousDatabase = !!seriesInfo.value.name;
+
   try {
     isSelectingFile.value = true;
     const result = await bomix.selectAndOpenDatabase();
     isSelectingFile.value = false;
 
     if (result) {
-      const currentSeries = bomix.getSeriesInfo();
-      seriesInfo.value = {
-        name: currentSeries.value.name,
-        note: currentSeries.value.note,
-        path: currentSeries.value.path,
-      };
-
       Notify.create({
         type: "positive",
-        message:
-          result.message || `${currentSeries.value.filename} 數據庫已開啟`,
+        message: result.message || `${seriesInfo.value.filename} 數據庫已開啟`,
       });
 
-      if (!currentSeries.value.name) {
+      // 如果已經有名稱，表示是已存在的資料庫，可以直接關閉對話框
+      if (seriesInfo.value.name && !hadPreviousDatabase) {
+        isOpen.value = false;
+        return;
+      }
+
+      if (!seriesInfo.value.name) {
         nextTick(() => {
           nameInput.value?.focus();
         });
@@ -210,4 +219,38 @@ function handleEscape() {
     isOpen.value = false;
   }
 }
+
+// 關閉數據庫
+async function closeDatabase() {
+  try {
+    const response = await window.BoMixAPI.sendAction("close-database");
+    if (response.status === "success") {
+      await bomix.loadSeriesInfo();
+      if (!seriesInfo.value.path) {
+        isSelectingFile.value = false;
+        nameInput.value = null;
+      }
+      Notify.create({
+        type: "positive",
+        message: "數據庫已關閉",
+      });
+    }
+  } catch (error) {
+    Notify.create({
+      type: "negative",
+      message: error.message || "關閉數據庫失敗",
+    });
+  }
+}
 </script>
+
+<style lang="scss" scoped>
+.close-db-btn {
+  margin-left: 4px;
+  color: #666;
+
+  &:hover {
+    color: var(--q-negative);
+  }
+}
+</style>

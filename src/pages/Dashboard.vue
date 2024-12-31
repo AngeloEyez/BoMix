@@ -56,7 +56,6 @@
 import DashboardBOMTable from "src/components/DashboardBOMTable.vue";
 import EditSeriesDialog from "components/EditSeriesDialog.vue";
 import { inject, onMounted, ref, watch } from "vue";
-import { useQuasar } from "quasar";
 
 const bomix = inject("BoMix");
 const statistics = bomix.getStatistics();
@@ -68,10 +67,11 @@ watch(
   () => seriesInfo.value.path,
   async (newPath) => {
     if (newPath) {
-      await bomix.updateStatistics();
+      // 如果有開啟的 series...
     } else {
-      // 如果沒有開啟的 series，清空列表
+      // 如果沒有開啟的 series，清空列表?
     }
+    bomix.updateStatistics();
   }
 );
 

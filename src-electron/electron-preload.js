@@ -29,7 +29,7 @@
  */
 
 // BoMix
-import { contextBridge, ipcRenderer } from "electron";
+import { contextBridge, ipcRenderer, webUtils } from "electron";
 
 contextBridge.exposeInMainWorld("BoMixAPI", {
   sendAction: async (action, data) => {
@@ -37,5 +37,12 @@ contextBridge.exposeInMainWorld("BoMixAPI", {
   },
   selectDirectory: async () => {
     return ipcRenderer.invoke("dialog:openDirectory");
+  },
+  getFilePath(file) {
+    // It's best not to expose the full file path to the web content if
+    // possible.
+    const path = webUtils.getPathForFile(file);
+    //alert(`Uploaded file path was: ${path}`);
+    return path;
   },
 });
