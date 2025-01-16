@@ -62,6 +62,8 @@
       <router-view />
     </q-page-container>
 
+    <SessionLog :style="{ marginLeft: sidebarWidth + 'px' }" ref="sessionLog" />
+
     <ConfigDialog v-model="showConfig" />
     <EditSeriesDialog v-model="showEditSeries" />
   </q-layout>
@@ -72,6 +74,7 @@ import { ref, computed, onMounted, onUnmounted, inject } from "vue";
 import EssentialLink from "components/EssentialLink.vue";
 import ConfigDialog from "components/ConfigDialog.vue";
 import EditSeriesDialog from "components/EditSeriesDialog.vue";
+import SessionLog from "components/SessionLog.vue";
 
 defineOptions({
   name: "MainLayout",
@@ -120,6 +123,7 @@ const linksList = [
 
 const showConfig = ref(false);
 const showEditSeries = ref(false);
+const sessionLog = ref(null);
 
 function startResize(e) {
   if (e.target.classList.contains("resize-handle")) {
@@ -130,10 +134,14 @@ function startResize(e) {
 }
 
 function handleMouseMove(e) {
-  if (!isResizing.value) return;
-  const diff = e.clientX - startX.value;
-  const newWidth = Math.max(MINI_WIDTH, Math.min(startWidth.value + diff, 400));
-  sidebarWidth.value = newWidth;
+  if (isResizing.value) {
+    const diff = e.clientX - startX.value;
+    const newWidth = Math.max(
+      MINI_WIDTH,
+      Math.min(startWidth.value + diff, 400)
+    );
+    sidebarWidth.value = newWidth;
+  }
 }
 
 function handleMouseUp() {
@@ -149,6 +157,11 @@ function handleNavigate() {
     sidebarWidth.value = MINI_WIDTH;
   }
 }
+
+// 導出方法供其他組件使用
+defineExpose({
+  addLog: (message) => sessionLog.value?.addLog(message),
+});
 </script>
 
 <style lang="scss">
@@ -233,6 +246,7 @@ function handleNavigate() {
     transition: margin-left 0.3s ease, width 0.3s ease;
     height: calc(100vh - 64px);
     overflow: hidden;
+    position: relative;
   }
 
   .series-info {

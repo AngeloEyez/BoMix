@@ -1,5 +1,10 @@
 <template>
-  <div class="bom-table-container" @drop.prevent="handleDrop" @dragover.prevent>
+  <div
+    class="bom-table-container"
+    @drop.prevent="handleDrop"
+    @dragover.prevent
+    :style="containerStyle"
+  >
     <div class="table-header">
       <q-btn
         flat
@@ -38,6 +43,7 @@
       virtual-scroll
       :virtual-scroll-sticky-size-start="48"
       :rows-per-page-options="[0]"
+      no-data-label="No data available"
     >
       <template v-slot:header="props">
         <q-tr :props="props">
@@ -87,9 +93,22 @@
 </template>
 
 <script setup>
-import { inject, ref, watch, onMounted } from "vue";
+import { inject, ref, watch, onMounted, onUnmounted, computed } from "vue";
 import { Notify, useQuasar } from "quasar";
 import EditSeriesDialog from "components/EditSeriesDialog.vue";
+
+const props = defineProps({
+  availableHeight: {
+    type: Number,
+    required: true,
+  },
+});
+
+// 計算容器高度
+const containerStyle = computed(() => ({
+  height: `${props.availableHeight}px`,
+  maxHeight: `${props.availableHeight}px`,
+}));
 
 const bomix = inject("BoMix");
 const $q = useQuasar();
@@ -99,13 +118,6 @@ const showDeleteConfirm = ref(false);
 const bomList = ref([]);
 const seriesInfo = bomix.getSeriesInfo();
 const hasSeries = ref(false);
-
-// 初始化 seriesInfo
-onMounted(async () => {
-  await bomix.loadSeriesInfo();
-  hasSeries.value = !!seriesInfo.value.path;
-  await loadBOMList();
-});
 
 // 監聽 series 變化
 watch(
@@ -290,6 +302,8 @@ async function deleteBOMs() {
   display: flex;
   flex-direction: column;
   overflow: hidden;
+  width: 100%;
+  transition: height 0.3s ease;
 
   .table-header {
     padding: 8px 16px;
@@ -314,18 +328,33 @@ async function deleteBOMs() {
 
   .bom-table {
     flex: 1;
-    height: calc(100% - 48px);
-
-    :deep(.q-table__middle) {
-      max-height: unset !important;
-    }
+    display: flex;
+    flex-direction: column;
 
     :deep(.q-table__container) {
       height: 100%;
+      display: flex;
+      flex-direction: column;
+    }
+
+    :deep(.q-table__middle) {
+      flex: 1;
+      min-height: 100px;
     }
 
     :deep(.q-virtual-scroll__content) {
-      max-height: unset !important;
+      flex: 1;
+    }
+
+    :deep(.q-table__grid-content) {
+      flex: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    :deep(.q-table__bottom) {
+      border-top: 1px solid rgba(0, 0, 0, 0.12);
     }
   }
 }
