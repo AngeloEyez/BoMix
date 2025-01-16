@@ -45,15 +45,15 @@ export class BomModel {
   async initSeries(name, note = "") {
     try {
       const filename = path.parse(this.#dbPath).name;
-      const series = {
+      const series = this.#normalizeData({
         type: "series",
         name,
-        note,
+        note: note,
         path: this.#dbPath,
         filename: filename,
         createdAt: new Date(),
         updatedAt: new Date(),
-      };
+      });
 
       this.#seriesInfo = await this.#db.insert(series);
       log.log("Series initialized:", this.#seriesInfo);
@@ -71,7 +71,7 @@ export class BomModel {
 
     // 如果沒有找到 series 信息，創建一個空的對象
     if (!this.#seriesInfo) {
-      this.#seriesInfo = {
+      this.#seriesInfo = this.#normalizeData({
         type: "series",
         name: "",
         note: "",
@@ -79,7 +79,7 @@ export class BomModel {
         filename: path.parse(this.#dbPath).name,
         createdAt: new Date(),
         updatedAt: new Date(),
-      };
+      });
     } else {
       // 確保現有的 seriesInfo 有完整的路徑信息
       if (!this.#seriesInfo.path) {
@@ -140,7 +140,7 @@ export class BomModel {
         return await this.updateBOM(existingBOM._id, bomData);
       }
 
-      const bom = {
+      const bom = this.#normalizeData({
         type: "bom",
         project: bomData.project,
         description: bomData.description,
@@ -151,7 +151,7 @@ export class BomModel {
         filename: bomData.filename || "",
         createdAt: new Date(),
         updatedAt: new Date(),
-      };
+      });
 
       const savedBOM = await this.#db.insert(bom);
       log.log("BOM created:", savedBOM);
@@ -171,7 +171,7 @@ export class BomModel {
         throw new Error("Main source part is required");
       }
 
-      const group = {
+      const group = this.#normalizeData({
         type: "group",
         bomId,
         process: groupData.process,
@@ -180,16 +180,18 @@ export class BomModel {
         location: groupData.location || "",
         ccl: groupData.ccl || "",
         mfgpnKey: `${mainPart.mfg}_${mainPart.mfgpn}`,
-        parts: groupData.parts.map((part) => ({
-          hhpn: part.hhpn,
-          description: part.description,
-          mfg: part.mfg,
-          mfgpn: part.mfgpn,
-          isMain: part.isMain || false,
-        })),
+        parts: groupData.parts.map((part) =>
+          this.#normalizeData({
+            hhpn: part.hhpn,
+            description: part.description,
+            mfg: part.mfg,
+            mfgpn: part.mfgpn,
+            isMain: part.isMain || false,
+          })
+        ),
         createdAt: new Date(),
         updatedAt: new Date(),
-      };
+      });
 
       const savedGroup = await this.#db.insert(group);
 
@@ -253,7 +255,7 @@ export class BomModel {
     try {
       if (!this.#seriesInfo) {
         // 如果沒有初始化，則創建一個新的
-        this.#seriesInfo = {
+        this.#seriesInfo = this.#normalizeData({
           type: "series",
           name: "",
           note: "",
@@ -261,14 +263,14 @@ export class BomModel {
           filename: path.parse(this.#dbPath).name,
           createdAt: new Date(),
           updatedAt: new Date(),
-        };
+        });
       }
 
       const updatedSeries = await this.#db.update(
         { type: "series" },
         {
           $set: {
-            ...seriesData,
+            ...this.#normalizeData(seriesData),
             path: this.#dbPath,
             filename: path.parse(this.#dbPath).name,
             updatedAt: new Date(),
@@ -345,5 +347,16 @@ export class BomModel {
       log.error("Failed to delete BOMs:", error);
       throw error;
     }
+  }
+
+  // 將null或空字串轉為undefined，保留數字0
+  #normalizeData(data) {
+    const obj = { ...data };
+    for (const key in obj) {
+      if (obj[key] === null || obj[key] === "") {
+        obj[key] = undefined;
+      }
+    }
+    return obj;
   }
 }
