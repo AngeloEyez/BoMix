@@ -10,7 +10,7 @@
               { 'no-series': !bomix.getSeriesInfo().value.name },
             ]"
           >
-            {{ bomix.getSeriesInfo().value.name || "Open/Create a Series" }}aa
+            {{ bomix.getSeriesInfo().value.name || "Open/Create a Series" }}
             <q-btn
               flat
               dense
