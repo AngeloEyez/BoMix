@@ -1,9 +1,9 @@
 import { app, ipcMain, dialog } from "electron";
 import path from "path";
-import { ConfigManager } from "./config/configManager";
-import pkg from "../package.json";
-import { BomManager } from "./models/bomManager";
 import log from "./utils/logger";
+import pkg from "../package.json";
+import { ConfigManager } from "./config/configManager";
+import { BomManager } from "./models/bomManager";
 
 export class BoMixM {
   #bomManager;

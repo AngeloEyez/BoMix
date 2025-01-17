@@ -62,7 +62,6 @@
 
 <script setup>
 import { ref, onMounted, onUnmounted, computed, inject } from "vue";
-import { SESSION_LOG_LEVEL } from "app/bomix/bomixR";
 
 const bomix = inject("BoMix");
 const MIN_HEIGHT = 100;

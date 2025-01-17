@@ -2,21 +2,33 @@ import log from "./utils/logger";
 import { ref } from "vue";
 import { DEFAULT_CONFIG } from "./config/defaultConfig";
 
-// 系統日誌相關常量
-export const SESSION_LOG_LEVEL = {
-  INFORMATION: "information",
-  WARNING: "warning",
-  ERROR: "error",
-};
+// 系統日誌相關常量和方法
+export const SessionLog = {
+  LEVEL: {
+    INFORMATION: "information",
+    WARNING: "warning",
+    ERROR: "error",
+  },
+  MAX_LOGS: 500,
 
-export const MAX_SESSION_LOGS = 500;
+  // 靜態方法：將日誌添加到陣列
+  push(array, message, level = "information") {
+    if (!Array.isArray(array)) {
+      throw new Error("First parameter must be an array");
+    }
+    array.unshift({
+      message,
+      level,
+    });
+    return array;
+  },
+};
 
 export class BoMixR {
   #seriesInfo;
   #statistics;
   #config;
   #sessionLogs;
-
   #initialized;
 
   constructor() {
@@ -46,12 +58,12 @@ export class BoMixR {
       // 如果輸入是字符串，轉換為物件格式
       const logObj =
         typeof log === "string"
-          ? { message: log, level: SESSION_LOG_LEVEL.INFORMATION }
+          ? { message: log, level: SessionLog.LEVEL.INFORMATION }
           : { ...log };
 
       // 確保有默認的 level
       if (!logObj.level) {
-        logObj.level = SESSION_LOG_LEVEL.INFORMATION;
+        logObj.level = SessionLog.LEVEL.INFORMATION;
       }
 
       return {
@@ -64,20 +76,20 @@ export class BoMixR {
     this.#sessionLogs.value = [...newLogs, ...this.#sessionLogs.value];
 
     // 如果超過最大數量，刪除較舊的日誌
-    if (this.#sessionLogs.value.length > MAX_SESSION_LOGS) {
+    if (this.#sessionLogs.value.length > SessionLog.MAX_LOGS) {
       this.#sessionLogs.value = this.#sessionLogs.value.slice(
         0,
-        MAX_SESSION_LOGS
+        SessionLog.MAX_LOGS
       );
     }
 
     // 同時記錄到系統日誌
     newLogs.forEach((l) => {
       switch (l.level) {
-        case SESSION_LOG_LEVEL.WARNING:
+        case SessionLog.LEVEL.WARNING:
           log.warn(l.message);
           break;
-        case SESSION_LOG_LEVEL.ERROR:
+        case SessionLog.LEVEL.ERROR:
           log.error(l.message);
           break;
         default:
