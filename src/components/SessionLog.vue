@@ -160,7 +160,7 @@ defineExpose({
   right: 0;
   background: white;
   border-top: 1px solid rgba(0, 0, 0, 0.12);
-  transition: height 0.3s ease;
+  transition: height 0s linear;
   z-index: 1000;
 
   &.collapsed {

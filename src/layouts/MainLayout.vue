@@ -247,8 +247,10 @@ defineExpose({
 
   .content-container {
     background-color: #f5f5f5;
-    transition: margin-left 0.3s ease, width 0.3s ease;
-    height: calc(100vh - 64px);
+    transition: margin-left 0.2s ease, width 0.2s ease;
+    height: 100%; /* 高度填满父容器 */
+    display: flex; /* 确保支持子元素的布局调整 */
+    flex-direction: column; /* 子元素从上到下排列 */
     overflow: hidden;
     position: relative;
   }

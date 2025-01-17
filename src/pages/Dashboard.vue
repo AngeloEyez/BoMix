@@ -78,7 +78,7 @@ const pageRef = ref(null);
 
 // 監聽 session log 狀態
 const MIN_TABLE_HEIGHT = 200;
-const LOG_BUTTON_HEIGHT = 24 + 45; // button高度+本體
+const LOG_BUTTON_HEIGHT = 24 + 20; // button高度+本體
 const sessionLogState = ref({
   isCollapsed: true,
   height: 0,
@@ -112,7 +112,7 @@ function calculateTableHeight() {
     ? 20 // 如果日誌被禁用，不需要預留空間
     : sessionLogState.value.isCollapsed
     ? LOG_BUTTON_HEIGHT // 收合時只保留按鈕高度
-    : sessionLogState.value.height + 12; // 展開時加上間距
+    : sessionLogState.value.height + 0; // 展開時加上間距
 
   // 計算實際可用高度
   let containerHeight = availableHeight - logSpace;
@@ -282,7 +282,7 @@ defineOptions({
 
       .series-edit-btn {
         color: #666;
-        transition: all 0.3s ease;
+        transition: all 0.2s ease;
 
         &:hover {
           color: var(--q-primary);
