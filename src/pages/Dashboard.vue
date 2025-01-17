@@ -57,6 +57,7 @@
 <script setup>
 import DashboardBOMTable from "src/components/DashboardBOMTable.vue";
 import EditSeriesDialog from "components/EditSeriesDialog.vue";
+import log from "app/bomix/utils/logger";
 import {
   inject,
   onMounted,
@@ -88,6 +89,16 @@ function handleSessionLogChange(event) {
   sessionLogState.value = event.detail;
 }
 
+// 監聽 enableSessionLog 設定變化
+watch(
+  () => bomix.config.value.enableSessionLog,
+  () => {
+    // 當設定變化時，強制更新表格高度
+    forceUpdate.value++;
+    log.log("Session log visibility changed, updating table height");
+  }
+);
+
 // 計算表格可用高度的邏輯
 function calculateTableHeight() {
   const windowHeight = window.innerHeight;
@@ -97,7 +108,9 @@ function calculateTableHeight() {
     windowHeight - headerHeight - pageHeaderHeight * 2 - statCardsHeight.value;
 
   // 計算與 session log 的間距
-  const logSpace = sessionLogState.value.isCollapsed
+  const logSpace = !bomix.config.value.enableSessionLog
+    ? 20 // 如果日誌被禁用，不需要預留空間
+    : sessionLogState.value.isCollapsed
     ? LOG_BUTTON_HEIGHT // 收合時只保留按鈕高度
     : sessionLogState.value.height + 12; // 展開時加上間距
 

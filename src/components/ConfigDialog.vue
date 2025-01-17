@@ -16,6 +16,12 @@
             <q-btn flat dense icon="folder" @click="selectDirectory" />
           </template>
         </q-input>
+
+        <q-toggle
+          v-model="config.enableSessionLog"
+          label="啟用系統日誌"
+          class="q-mt-md"
+        />
       </q-card-section>
 
       <q-card-actions align="right" class="text-primary">
@@ -27,7 +33,7 @@
 </template>
 
 <script setup>
-import { ref, reactive, watch } from "vue";
+import { ref, reactive, watch, inject } from "vue";
 import { Notify } from "quasar";
 
 // 定義組件名稱
@@ -41,11 +47,13 @@ const props = defineProps({
 });
 
 const emit = defineEmits(["update:modelValue"]);
+const bomix = inject("BoMix");
 
 // 組件邏輯
 const isOpen = ref(props.modelValue);
 const config = reactive({
   defaultDatabasePath: "",
+  enableSessionLog: true,
 });
 
 // 監聽對話框開啟狀態
@@ -70,6 +78,7 @@ async function loadConfig() {
     const response = await window.BoMixAPI.sendAction("get-config");
     if (response.status === "success") {
       config.defaultDatabasePath = response.content.defaultDatabasePath || "";
+      config.enableSessionLog = response.content.enableSessionLog ?? true;
     }
   } catch (error) {
     Notify.create({
@@ -85,12 +94,14 @@ async function saveConfig() {
     console.log("Saving config:", config);
     const configData = {
       defaultDatabasePath: config.defaultDatabasePath,
+      enableSessionLog: config.enableSessionLog,
     };
     const response = await window.BoMixAPI.sendAction(
       "update-config",
       configData
     );
     if (response.status === "success") {
+      bomix.loadConfig();
       Notify.create({
         type: "positive",
         message: "配置已保存",

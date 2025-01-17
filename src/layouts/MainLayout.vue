@@ -62,7 +62,11 @@
       <router-view />
     </q-page-container>
 
-    <SessionLog :style="{ marginLeft: sidebarWidth + 'px' }" ref="sessionLog" />
+    <SessionLog
+      v-if="bomix.config.value.enableSessionLog"
+      :style="{ marginLeft: sidebarWidth + 'px' }"
+      ref="sessionLog"
+    />
 
     <ConfigDialog v-model="showConfig" />
     <EditSeriesDialog v-model="showEditSeries" />

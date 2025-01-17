@@ -1,7 +1,6 @@
 import { app, ipcMain, dialog } from "electron";
-import Datastore from "nedb-promises";
 import path from "path";
-import { ConfigManager } from "./utils/configManager";
+import { ConfigManager } from "./config/configManager";
 import pkg from "../package.json";
 import { BomManager } from "./models/bomManager";
 import log from "./utils/logger";
@@ -15,7 +14,7 @@ export class BoMixM {
     this.#bomManager = new BomManager(this.#configManager);
     this.#setupIpcHandlers();
     this.#setupAppHandlers(); //應用程序級別的事件
-    log.log("BoMixR initialized");
+    log.log("BoMixR: All initialized");
   }
 
   #setupAppHandlers() {
@@ -313,6 +312,6 @@ export class BoMixM {
       return result.canceled ? null : result.filePaths[0];
     });
 
-    console.log("BoMixR - IPC initialized.");
+    log.log("BoMixR: IPC initialized.");
   }
 }

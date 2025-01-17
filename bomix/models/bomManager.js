@@ -1,5 +1,4 @@
 import { dialog } from "electron";
-import path from "path";
 import * as XLSX from "xlsx";
 import fs from "fs/promises";
 import { BomModel } from "./bomModel";

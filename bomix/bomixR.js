@@ -1,11 +1,13 @@
 import log from "./utils/logger";
-import * as XLSX from "xlsx";
 import { ref } from "vue";
-
+import { DEFAULT_CONFIG } from "./config/defaultConfig";
 
 export class BoMixR {
   #seriesInfo;
   #statistics;
+  #config;
+
+  #initialized;
 
   constructor() {
     this.#seriesInfo = ref({
@@ -19,12 +21,50 @@ export class BoMixR {
       phaseCount: 0,
       bomCount: 0,
     });
-    log.log("BoMixR initialized");
+    this.#config = ref({ ...DEFAULT_CONFIG });
+    this.#initialized = false;
+  }
+
+  // 初始化方法
+  async #initialize() {
+    try {
+      await this.loadConfig();
+      this.#initialized = true;
+    } catch (error) {
+      log.error("BoMixR - Failed to initialize:", error);
+      throw error;
+    }
+  }
+
+  // 確保初始化完成的輔助方法
+  async ensureInitialized() {
+    if (!this.#initialized) {
+      await this.#initialize();
+    }
+  }
+
+  // Getter for private config
+  get config() {
+    return this.#config;
   }
 
   // 獲取 series info
   getSeriesInfo() {
     return this.#seriesInfo;
+  }
+
+  // 加載 config 信息
+  async loadConfig() {
+    try {
+      const response = await window.BoMixAPI.sendAction("get-config");
+      if (response.status === "success" && response.content) {
+        Object.assign(this.#config.value, response.content);
+      }
+      log.log("BoMixR - load config:", this.#config.value);
+    } catch (error) {
+      log.error("BoMixR - Failed to load config :", error);
+      throw error;
+    }
   }
 
   // 加載 series 信息

@@ -1,7 +1,8 @@
 import { app } from "electron";
 import path from "path";
 import fs from "fs";
-import log from "./logger";
+import log from "app/bomix/utils/logger";
+import { DEFAULT_CONFIG } from "./defaultConfig";
 
 export class ConfigManager {
   #configPath;
@@ -11,11 +12,9 @@ export class ConfigManager {
   constructor() {
     // 改用 userData 目錄而不是 exe 目錄
     this.#configPath = path.join(app.getPath("userData"), "config.json");
-    // 定義默認配置
-    this.#defaultConfig = {
-      defaultDatabasePath: "",
-    };
-    console.log("configPath:", this.#configPath);
+    // 使用默認配置
+    this.#defaultConfig = { ...DEFAULT_CONFIG };
+    log.log("ConfigManager: configPath:", this.#configPath);
     this.#loadConfig();
   }
 
@@ -24,7 +23,7 @@ export class ConfigManager {
       if (fs.existsSync(this.#configPath)) {
         const data = fs.readFileSync(this.#configPath, "utf8");
         this.#config = JSON.parse(data);
-        log.log("config loaded succesfully:", this.#config);
+        log.log("ConfigManager: config loaded succesfully:", this.#config);
       } else {
         // 使用默認配置
         this.#config = { ...this.#defaultConfig };
