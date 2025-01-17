@@ -161,11 +161,6 @@ function handleNavigate() {
     sidebarWidth.value = MINI_WIDTH;
   }
 }
-
-// 導出方法供其他組件使用
-defineExpose({
-  addLog: (message) => sessionLog.value?.addLog(message),
-});
 </script>
 
 <style lang="scss">

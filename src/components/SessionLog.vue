@@ -25,13 +25,25 @@
 
     <!-- 日誌內容區域 -->
     <template v-if="isCollapsed">
-      <div class="collapsed-log">{{ lastLog }}</div>
+      <div class="collapsed-log" :class="lastLog?.level">
+        {{ lastLog?.message || "" }}
+      </div>
     </template>
     <template v-else>
       <div class="log-content">
         <div class="log-scroll-container">
           <q-scroll-area class="log-scroll-area">
-            <pre class="log-text">{{ logs.join("\n") }}</pre>
+            <div class="log-text">
+              <div
+                v-for="(log, index) in logs"
+                :key="index"
+                class="log-line"
+                :class="log.level"
+              >
+                <span class="log-timestamp">{{ log.timestamp }}</span>
+                {{ log.message }}
+              </div>
+            </div>
           </q-scroll-area>
           <q-btn
             class="clear-btn"
@@ -49,12 +61,10 @@
 </template>
 
 <script setup>
-/**
- * 系統日誌組件
- * 提供可折疊、可調整高度的日誌顯示功能
- */
-import { ref, onMounted, onUnmounted, computed } from "vue";
+import { ref, onMounted, onUnmounted, computed, inject } from "vue";
+import { SESSION_LOG_LEVEL } from "app/bomix/bomixR";
 
+const bomix = inject("BoMix");
 const MIN_HEIGHT = 100;
 const DEFAULT_HEIGHT = 100;
 
@@ -72,18 +82,10 @@ const lastExpandedHeight = ref(DEFAULT_HEIGHT);
 const isResizing = ref(false);
 const startY = ref(0);
 const startHeight = ref(0);
-const logs = ref([
-  "系統啟動...Hi  Gaven  GPIO Table现在最新版的还是你上次提供的14-1那份是吗Hi  Gaven  GPIO Table现在最新版的还是你上次提供的14-1那份是吗Hi  Gaven  GPIO Table现在最新版的还是你上次提供的14-1那份是吗0",
-  "Hi  Gaven  GPIO Table现在最新版的还是你上次提供的14-1那份是吗Hi  Gaven  GPIO Table现在最新版的还是你上次提供的14-1那份是吗Hi  Gaven  GPIO Table现在最新版的还是你上次提供的14-1那份是吗",
-  "Hi  Gaven  GPIO Table现在最新版的还是你上次提供的14-1那份是吗Hi  Gaven  GPIO Table现在最新版的还是你上次提供的14-1那份是吗Hi  Gaven  GPIO Table现在最新版的还是你上次提供的14-1那份是吗",
-  "Hi  Gaven  GPIO Table现在最新版的还是你上次提供的14-1那份是吗Hi  Gaven  GPIO Table现在最新版的还是你上次提供的14-1那份是吗Hi  Gaven  GPIO Table现在最新版的还是你上次提供的14-1那份是吗",
-  "Hi  Gaven  GPIO Table现在最新版的还是你上次提供的14-1那份是吗Hi  Gaven  GPIO Table现在最新版的还是你上次提供的14-1那份是吗Hi  Gaven  GPIO Table现在最新版的还是你上次提供的14-1那份是吗",
-]);
 
-// 計算最後一條日誌
-const lastLog = computed(() => {
-  return logs.value[logs.value.length - 1] || "";
-});
+// 獲取日誌數據
+const logs = computed(() => bomix.getSessionLogs().value);
+const lastLog = computed(() => logs.value[0]);
 
 // 日誌區域拖拽調整大小
 function startResize(e) {
@@ -126,12 +128,7 @@ function toggleCollapse() {
 
 // 清空日誌
 function clearLogs() {
-  logs.value = [];
-}
-
-// 添加日誌的方法（可以被其他組件調用）
-function addLog(message) {
-  logs.value.push(`[${new Date().toLocaleTimeString()}] ${message}`);
+  bomix.clearSessionLogs();
 }
 
 // 通知狀態變化
@@ -167,12 +164,6 @@ onUnmounted(() => {
   document.removeEventListener("mouseup", handleMouseUp);
   window.removeEventListener("resize", handleResize);
 });
-
-// 導出方法供其他組件使用
-defineExpose({
-  addLog,
-  clearLogs,
-});
 </script>
 
 <style lang="scss" scoped>
@@ -190,13 +181,25 @@ defineExpose({
     height: 24px !important;
 
     .collapsed-log {
-      padding: 6px 10px 10px 2px;
-      font-family: monospace;
+      padding: 6px 10px 2px 10px;
+      font-family: calibri;
       font-size: 11px;
-      color: #666;
       white-space: nowrap;
       overflow: hidden;
       text-overflow: ellipsis;
+      margin-right: 100px;
+
+      &.information {
+        color: #666;
+      }
+
+      &.warning {
+        color: var(--q-warning);
+      }
+
+      &.error {
+        color: var(--q-negative);
+      }
     }
   }
 
@@ -254,7 +257,7 @@ defineExpose({
     .log-scroll-container {
       height: 100%;
       position: relative;
-      padding: 2px 8px 8px 8px;
+      padding: 2px 8px 8px 8px; //T/R/B/L
 
       .log-scroll-area {
         height: 100%;
@@ -262,12 +265,31 @@ defineExpose({
 
         .log-text {
           margin: 0;
-          padding: 8px;
-          font-family: monospace;
+          padding: 0px;
+          font-family: calibri;
           font-size: 11px;
-          white-space: pre;
-          color: #666;
-          overflow-x: auto;
+
+          .log-line {
+            white-space: pre;
+            margin-bottom: 2px;
+
+            .log-timestamp {
+              color: #999;
+              margin-right: 4px;
+            }
+
+            &.information {
+              color: #666;
+            }
+
+            &.warning {
+              color: var(--q-warning);
+            }
+
+            &.error {
+              color: var(--q-negative);
+            }
+          }
         }
       }
 

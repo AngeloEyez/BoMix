@@ -96,6 +96,7 @@
 import { inject, ref, watch, onMounted, onUnmounted, computed } from "vue";
 import { Notify, useQuasar } from "quasar";
 import EditSeriesDialog from "components/EditSeriesDialog.vue";
+import { SESSION_LOG_LEVEL } from "app/bomix/bomixR";
 
 const props = defineProps({
   availableHeight: {
@@ -246,6 +247,10 @@ async function import_excel_files(excelFiles = []) {
     if (response.status === "success") {
       await loadBOMList();
       await bomix.updateStatistics();
+      bomix.addSessionLogs({
+        message: `成功導入 BOM 文件: ${response.content}`,
+        level: SESSION_LOG_LEVEL.INFORMATION,
+      });
       Notify.create({
         type: "positive",
         message: "成功導入 BOM 文件",

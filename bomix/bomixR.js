@@ -2,10 +2,20 @@ import log from "./utils/logger";
 import { ref } from "vue";
 import { DEFAULT_CONFIG } from "./config/defaultConfig";
 
+// 系統日誌相關常量
+export const SESSION_LOG_LEVEL = {
+  INFORMATION: "information",
+  WARNING: "warning",
+  ERROR: "error",
+};
+
+export const MAX_SESSION_LOGS = 500;
+
 export class BoMixR {
   #seriesInfo;
   #statistics;
   #config;
+  #sessionLogs;
 
   #initialized;
 
@@ -23,6 +33,67 @@ export class BoMixR {
     });
     this.#config = ref({ ...DEFAULT_CONFIG });
     this.#initialized = false;
+    this.#sessionLogs = ref([]);
+  }
+
+  // 添加系統日誌
+  addSessionLogs(logs) {
+    // 確保輸入是陣列形式
+    const logsArray = Array.isArray(logs) ? logs : [logs];
+
+    const timestamp = new Date().toLocaleTimeString();
+    const newLogs = logsArray.map((log) => {
+      // 如果輸入是字符串，轉換為物件格式
+      const logObj =
+        typeof log === "string"
+          ? { message: log, level: SESSION_LOG_LEVEL.INFORMATION }
+          : { ...log };
+
+      // 確保有默認的 level
+      if (!logObj.level) {
+        logObj.level = SESSION_LOG_LEVEL.INFORMATION;
+      }
+
+      return {
+        ...logObj,
+        timestamp,
+      };
+    });
+
+    // 將新日誌添加到開頭
+    this.#sessionLogs.value = [...newLogs, ...this.#sessionLogs.value];
+
+    // 如果超過最大數量，刪除較舊的日誌
+    if (this.#sessionLogs.value.length > MAX_SESSION_LOGS) {
+      this.#sessionLogs.value = this.#sessionLogs.value.slice(
+        0,
+        MAX_SESSION_LOGS
+      );
+    }
+
+    // 同時記錄到系統日誌
+    newLogs.forEach((l) => {
+      switch (l.level) {
+        case SESSION_LOG_LEVEL.WARNING:
+          log.warn(l.message);
+          break;
+        case SESSION_LOG_LEVEL.ERROR:
+          log.error(l.message);
+          break;
+        default:
+          log.log(l.message);
+      }
+    });
+  }
+
+  // 獲取系統日誌
+  getSessionLogs() {
+    return this.#sessionLogs;
+  }
+
+  // 清空系統日誌
+  clearSessionLogs() {
+    this.#sessionLogs.value = [];
   }
 
   // 初始化方法
