@@ -243,13 +243,10 @@ async function import_excel_files(excelFiles = []) {
       files: excelFiles,
     });
 
+    bomix.addSessionLogs(response.message);
     if (response.status === "success") {
       await loadBOMList();
       await bomix.updateStatistics();
-      bomix.addSessionLogs({
-        message: `成功導入 BOM 文件: ${response.content}`,
-        level: bomix.sessionLog.LEVEL.INFORMATION,
-      });
       Notify.create({
         type: "positive",
         message: "成功導入 BOM 文件",
@@ -261,6 +258,7 @@ async function import_excel_files(excelFiles = []) {
       });
     }
   } catch (error) {
+    bomix.addSessionLogs(response.message);
     Notify.create({
       type: "negative",
       message: error.message || "導入失敗",

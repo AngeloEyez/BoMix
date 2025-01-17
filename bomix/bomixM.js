@@ -102,30 +102,6 @@ export class BoMixM {
             return { status: "error", message: error.message };
           }
 
-        case "import-bom-data":
-          try {
-            const db = this.#bomManager.getCurrentDatabase();
-            if (!db) {
-              throw new Error("No database is currently open");
-            }
-
-            // 創建或更新 BOM
-            const bom = await db.createBOM(data.project);
-
-            // 創建所有 groups
-            for (const groupData of data.groups) {
-              await db.createGroup(bom._id, groupData);
-            }
-
-            return {
-              status: "success",
-              content: bom,
-              message: "BOM data imported successfully",
-            };
-          } catch (error) {
-            return { status: "error", message: error.message };
-          }
-
         case "get-config":
           return {
             status: "success",
@@ -236,6 +212,7 @@ export class BoMixM {
           }
 
         case "import-excel-files":
+          let result = [];
           try {
             const db = this.#bomManager.getCurrentDatabase();
             if (!db) {
@@ -273,8 +250,19 @@ export class BoMixM {
             for (const file of filesToProcess) {
               const filePath = file.path;
               if (!filePath) {
+                SessionLog.push(
+                  result,
+                  `Invalid file path: ${filePath}`,
+                  SessionLog.LEVEL.ERROR
+                );
                 log.error("Invalid file path:", filePath);
                 continue;
+              } else {
+                SessionLog.push(
+                  result,
+                  `成功導入 BOM 文件: ${filePath}`,
+                  SessionLog.LEVEL.INFORMATION
+                );
               }
 
               const workbook = await this.#bomManager.readExcelFile(filePath);
@@ -294,11 +282,16 @@ export class BoMixM {
 
             return {
               status: "success",
-              message: "BOM files imported successfully",
+              message: result,
             };
           } catch (error) {
+            SessionLog.push(
+              result,
+              `Import Excel files failed: ${error.message}`,
+              SessionLog.LEVEL.ERROR
+            );
             log.error("Import Excel files failed:", error);
-            return { status: "error", message: error.message };
+            return { status: "error", message: result };
           }
 
         default:
