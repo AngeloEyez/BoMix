@@ -153,6 +153,10 @@ async function selectDatabaseFile() {
     isSelectingFile.value = false;
 
     if (result) {
+      bomix.addSessionLogs({
+        message: `${seriesInfo.value.filename} (${seriesInfo.value.name}) 數據庫已開啟 (${seriesInfo.value.path})`,
+        level: bomix.sessionLog.LEVEL.INFO,
+      });
       Notify.create({
         type: "positive",
         message: result.message || `${seriesInfo.value.filename} 數據庫已開啟`,
@@ -225,6 +229,10 @@ async function closeDatabase() {
   try {
     const response = await window.BoMixAPI.sendAction("close-database");
     if (response.status === "success") {
+      bomix.addSessionLogs({
+        message: `${seriesInfo.value.filename} (${seriesInfo.value.name}) 數據庫已關閉 (${seriesInfo.value.path})`,
+        level: bomix.sessionLog.LEVEL.INFO,
+      });
       await bomix.loadSeriesInfo();
       if (!seriesInfo.value.path) {
         isSelectingFile.value = false;

@@ -1,28 +1,7 @@
 import log from "./utils/logger";
 import { ref } from "vue";
 import { DEFAULT_CONFIG } from "./config/defaultConfig";
-
-// 系統日誌相關常量和方法
-export const SessionLog = {
-  LEVEL: {
-    INFORMATION: "information",
-    WARNING: "warning",
-    ERROR: "error",
-  },
-  MAX_LOGS: 500,
-
-  // 靜態方法：將日誌添加到陣列
-  push(array, message, level = "information") {
-    if (!Array.isArray(array)) {
-      throw new Error("First parameter must be an array");
-    }
-    array.unshift({
-      message,
-      level,
-    });
-    return array;
-  },
-};
+import { SessionLog } from "./sessionLog";
 
 export class BoMixR {
   #seriesInfo;
@@ -30,8 +9,10 @@ export class BoMixR {
   #config;
   #sessionLogs;
   #initialized;
+  sessionLog;
 
   constructor() {
+    this.sessionLog = SessionLog;
     this.#seriesInfo = ref({
       name: "",
       note: "",
@@ -58,12 +39,12 @@ export class BoMixR {
       // 如果輸入是字符串，轉換為物件格式
       const logObj =
         typeof log === "string"
-          ? { message: log, level: SessionLog.LEVEL.INFORMATION }
+          ? { message: log, level: SessionLog.LEVEL.INFO }
           : { ...log };
 
       // 確保有默認的 level
       if (!logObj.level) {
-        logObj.level = SessionLog.LEVEL.INFORMATION;
+        logObj.level = SessionLog.LEVEL.INFO;
       }
 
       return {

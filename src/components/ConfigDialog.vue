@@ -102,14 +102,22 @@ async function saveConfig() {
     );
     if (response.status === "success") {
       bomix.loadConfig();
-      Notify.create({
-        type: "positive",
+      bomix.addSessionLogs({
         message: "配置已保存",
+        level: bomix.sessionLog.LEVEL.INFO,
       });
+      // Notify.create({
+      //   type: "positive",
+      //   message: "配置已保存",
+      // });
       isOpen.value = false;
     }
   } catch (error) {
-    console.error("Save config error:", error);
+    //console.error("Save config error:", error);
+    bomix.addSessionLogs({
+      message: `保存配置失敗: ${error.message}`,
+      level: bomix.sessionLog.LEVEL.ERROR,
+    });
     Notify.create({
       type: "negative",
       message: "保存配置失敗",

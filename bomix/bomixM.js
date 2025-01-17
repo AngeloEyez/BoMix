@@ -4,6 +4,7 @@ import log from "./utils/logger";
 import pkg from "../package.json";
 import { ConfigManager } from "./config/configManager";
 import { BomManager } from "./models/bomManager";
+import { SessionLog } from "./sessionLog";
 
 export class BoMixM {
   #bomManager;
