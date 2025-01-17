@@ -24,15 +24,27 @@
     </div>
 
     <!-- 日誌內容區域 -->
-    <div class="log-content" v-show="!isCollapsed">
-      <div class="log-header">
-        <div class="text-subtitle2">系統日誌</div>
-        <q-btn flat dense round icon="delete" size="sm" @click="clearLogs" />
+    <template v-if="isCollapsed">
+      <div class="collapsed-log">{{ lastLog }}</div>
+    </template>
+    <template v-else>
+      <div class="log-content">
+        <div class="log-scroll-container">
+          <q-scroll-area class="log-scroll-area">
+            <pre class="log-text">{{ logs.join("\n") }}</pre>
+          </q-scroll-area>
+          <q-btn
+            class="clear-btn"
+            flat
+            dense
+            round
+            icon="delete"
+            size="sm"
+            @click="clearLogs"
+          />
+        </div>
       </div>
-      <q-scroll-area class="log-scroll-area">
-        <pre class="log-text">{{ logs.join("\n") }}</pre>
-      </q-scroll-area>
-    </div>
+    </template>
   </div>
 </template>
 
@@ -41,7 +53,7 @@
  * 系統日誌組件
  * 提供可折疊、可調整高度的日誌顯示功能
  */
-import { ref, onMounted, onUnmounted } from "vue";
+import { ref, onMounted, onUnmounted, computed } from "vue";
 
 const MIN_HEIGHT = 100;
 const DEFAULT_HEIGHT = 100;
@@ -60,7 +72,18 @@ const lastExpandedHeight = ref(DEFAULT_HEIGHT);
 const isResizing = ref(false);
 const startY = ref(0);
 const startHeight = ref(0);
-const logs = ref(["系統啟動..."]);
+const logs = ref([
+  "系統啟動...Hi  Gaven  GPIO Table现在最新版的还是你上次提供的14-1那份是吗Hi  Gaven  GPIO Table现在最新版的还是你上次提供的14-1那份是吗Hi  Gaven  GPIO Table现在最新版的还是你上次提供的14-1那份是吗0",
+  "Hi  Gaven  GPIO Table现在最新版的还是你上次提供的14-1那份是吗Hi  Gaven  GPIO Table现在最新版的还是你上次提供的14-1那份是吗Hi  Gaven  GPIO Table现在最新版的还是你上次提供的14-1那份是吗",
+  "Hi  Gaven  GPIO Table现在最新版的还是你上次提供的14-1那份是吗Hi  Gaven  GPIO Table现在最新版的还是你上次提供的14-1那份是吗Hi  Gaven  GPIO Table现在最新版的还是你上次提供的14-1那份是吗",
+  "Hi  Gaven  GPIO Table现在最新版的还是你上次提供的14-1那份是吗Hi  Gaven  GPIO Table现在最新版的还是你上次提供的14-1那份是吗Hi  Gaven  GPIO Table现在最新版的还是你上次提供的14-1那份是吗",
+  "Hi  Gaven  GPIO Table现在最新版的还是你上次提供的14-1那份是吗Hi  Gaven  GPIO Table现在最新版的还是你上次提供的14-1那份是吗Hi  Gaven  GPIO Table现在最新版的还是你上次提供的14-1那份是吗",
+]);
+
+// 計算最後一條日誌
+const lastLog = computed(() => {
+  return logs.value[logs.value.length - 1] || "";
+});
 
 // 日誌區域拖拽調整大小
 function startResize(e) {
@@ -165,16 +188,27 @@ defineExpose({
 
   &.collapsed {
     height: 24px !important;
+
+    .collapsed-log {
+      padding: 6px 10px 10px 2px;
+      font-family: monospace;
+      font-size: 11px;
+      color: #666;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
   }
 
   .resize-handle {
     position: absolute;
-    top: 0;
+    top: -3px;
     left: 0;
     right: 0;
-    height: 4px;
+    height: 6px;
     cursor: ns-resize;
     background: transparent;
+    z-index: 1002;
 
     &:hover {
       background-color: rgba(0, 0, 0, 0.1);
@@ -213,28 +247,42 @@ defineExpose({
   }
 
   .log-content {
-    height: 100%;
-    padding: 8px;
-    display: flex;
-    flex-direction: column;
+    height: calc(100% - 4px);
+    margin-top: 4px;
+    position: relative;
 
-    .log-header {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      padding-bottom: 8px;
-    }
+    .log-scroll-container {
+      height: 100%;
+      position: relative;
+      padding: 2px 8px 8px 8px;
 
-    .log-scroll-area {
-      flex: 1;
+      .log-scroll-area {
+        height: 100%;
+        padding-right: 36px;
 
-      .log-text {
-        margin: 0;
-        padding: 8px;
-        font-family: monospace;
-        font-size: 12px;
-        white-space: pre-wrap;
-        color: #666;
+        .log-text {
+          margin: 0;
+          padding: 8px;
+          font-family: monospace;
+          font-size: 11px;
+          white-space: pre;
+          color: #666;
+          overflow-x: auto;
+        }
+      }
+
+      .clear-btn {
+        position: absolute;
+        top: 8px;
+        right: 20px;
+        z-index: 2;
+        background: white;
+        opacity: 0.8;
+        transition: opacity 0.3s;
+
+        &:hover {
+          opacity: 1;
+        }
       }
     }
   }
