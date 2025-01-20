@@ -26,54 +26,75 @@ export class BomManager {
       throw new Error("NO_DATABASE");
     }
 
-    for (const file of files) {
-      const filePath = file.path;
-      if (!filePath) {
-        SessionLog.push(result, `無效的文件路徑: ${filePath}`, SessionLog.LEVEL.WARNING);
-        log.warn("Invalid file path:", filePath);
-        continue;
-      }
-      const filename = path.basename(filePath);
+    // 將文件按類型分類
+    const commonBOMs = [];
+    const matrixBOMs = [];
 
-      try {
-        // 讀取 Excel 文件
-        const workbook = await this.readExcelFile(filePath);
-
-        // 檢查 BOM 類型
-        const bomType = this.detectBOMType(workbook);
-        log.log(`Detected BOM type: ${bomType} for file ${filename}`);
-
-        // 根據不同類型解析數據
-        switch (bomType) {
-          case "commonBOM":
-            try {
-              await this.#parseCommonBOM(workbook, filename);
-              SessionLog.push(result, `成功導入 Common BOM: ${filename}`, SessionLog.LEVEL.INFORMATION);
-            } catch (error) {
-              SessionLog.push(result, `導入 Common BOM 失敗: ${filename} 錯誤: ${error.message}`, SessionLog.LEVEL.ERROR);
-              log.error(`Parse Common BOM failed for file ${filename}:`, error);
-              continue;
-            }
-            break;
-          case "matrixBOM":
-            try {
-              await this.#parseMatrixBOM(workbook, filename);
-              SessionLog.push(result, `成功導入 Matrix BOM: ${filename}`, SessionLog.LEVEL.INFORMATION);
-            } catch (error) {
-              SessionLog.push(result, `導入 Matrix BOM 失敗: ${filename} 錯誤: ${error.message}`, SessionLog.LEVEL.ERROR);
-              log.error(`Parse Matrix BOM failed for file ${filename}:`, error);
-              continue;
-            }
-            break;
-          default:
-            SessionLog.push(result, `不支援的 BOM 類型: ${filename}`, SessionLog.LEVEL.WARNING);
-            continue;
+    // 第一步：檢查並分類所有文件
+    await Promise.all(
+      files.map(async (file) => {
+        const filePath = file.path;
+        if (!filePath) {
+          SessionLog.push(result, `無效的文件路徑: ${filePath}`, SessionLog.LEVEL.WARNING);
+          log.warn("Invalid file path:", filePath);
+          return;
         }
-      } catch (error) {
-        // 記錄錯誤信息
-        SessionLog.push(result, `導入文件失敗: ${filename} 錯誤: ${error.message}`, SessionLog.LEVEL.ERROR);
-        log.error(`Failed to import file ${filename}:`, error);
-      }
+
+        try {
+          const workbook = await this.readExcelFile(filePath);
+          const bomType = this.detectBOMType(workbook);
+          file.workbook = workbook; // 保存已讀取的 workbook 以避免重複讀取
+
+          switch (bomType) {
+            case "commonBOM":
+              commonBOMs.push(file);
+              break;
+            case "matrixBOM":
+              matrixBOMs.push(file);
+              break;
+            default:
+              SessionLog.push(result, `不支援的 BOM 類型: ${path.basename(filePath)}`, SessionLog.LEVEL.WARNING);
+          }
+        } catch (error) {
+          SessionLog.push(result, `檢查文件類型失敗: ${path.basename(filePath)} - ${error.message}`, SessionLog.LEVEL.ERROR);
+        }
+      })
+    );
+
+    // 第二步：處理所有 commonBOM
+    if (commonBOMs.length > 0) {
+      await Promise.all(
+        commonBOMs.map(async (file) => {
+          const filename = path.basename(file.path);
+          try {
+            await this.#parseCommonBOM(file.workbook, filename);
+            SessionLog.push(result, `成功導入 Common BOM: ${filename}`, SessionLog.LEVEL.INFO);
+          } catch (error) {
+            if (error.message === "USER_CANCELLED") {
+              SessionLog.push(result, `Common BOM 重複 (選擇不導入): ${filename} `, SessionLog.LEVEL.WARNING);
+            } else {
+              SessionLog.push(result, `導入 Common BOM 失敗: ${filename} - ${error.message}`, SessionLog.LEVEL.ERROR);
+              log.error(`Parse Common BOM failed for file ${filename}:`, error);
+            }
+          }
+        })
+      );
+    }
+
+    // 第三步：處理所有 matrixBOM
+    if (matrixBOMs.length > 0) {
+      await Promise.all(
+        matrixBOMs.map(async (file) => {
+          const filename = path.basename(file.path);
+          try {
+            await this.#parseMatrixBOM(file.workbook, filename);
+            SessionLog.push(result, `成功導入 Matrix BOM: ${filename}`, SessionLog.LEVEL.INFO);
+          } catch (error) {
+            SessionLog.push(result, `導入 Matrix BOM 失敗: ${filename} - ${error.message}`, SessionLog.LEVEL.ERROR);
+            log.error(`Parse Matrix BOM failed for file ${filename}:`, error);
+          }
+        })
+      );
     }
   }
 
@@ -171,7 +192,59 @@ export class BomManager {
   }
 
   async #parseCommonBOM(workbook, filename) {
+    const db = this.getCurrentDatabase();
+    if (!db) {
+      throw new Error("NO_DATABASE");
+    }
+
     try {
+      // 首先從 SMD sheet 中提取項目信息
+      const smdSheet = workbook.Sheets["SMD"];
+      const projectInfo = {
+        project: this.#extractProjectInfo(smdSheet, "B3", "Product Code:"),
+        description: this.#extractProjectInfo(smdSheet, "B4", "Description:"),
+        pcapn: this.#extractProjectInfo(smdSheet, "F4", "PCA PN:"),
+        version: this.#extractProjectInfo(smdSheet, "H3", "BOM Version:"),
+        phase: this.#extractProjectInfo(smdSheet, "J3", "Phase:"),
+        date: this.#extractProjectInfo(smdSheet, "H4", "Date:"),
+        filename: filename,
+      };
+
+      // 檢查是否存在相同的 BOM
+      const existingBOM = await db.findExistingBOM({
+        project: projectInfo.project,
+        phase: projectInfo.phase,
+        version: projectInfo.version,
+      });
+
+      if (existingBOM) {
+        // 彈出對話方塊詢問使用者
+        const result = await dialog.showMessageBox({
+          type: "warning",
+          title: "BOM 已存在",
+          message: "資料庫中已存在相同版本的 BOM",
+          detail: `專案: ${projectInfo.project}
+版本: ${projectInfo.version}
+階段: ${projectInfo.phase}
+描述: ${projectInfo.description}
+建立時間: ${new Date(existingBOM.createdAt).toLocaleString()}
+最後更新: ${new Date(existingBOM.updatedAt).toLocaleString()}
+
+⚠ ！！！警告！！！
+覆蓋此 BOM 將會清空該 BOM 的所有 Matrix 信息
+⚠ ！！！警告！！！`,
+          buttons: ["覆蓋", "取消"],
+          defaultId: 1,
+          cancelId: 1,
+          noLink: true,
+        });
+
+        // 如果使用者選擇不覆蓋，則中止導入
+        if (result.response === 1) {
+          throw new Error("USER_CANCELLED");
+        }
+      }
+
       const worksheets = ["SMD", "PTH", "BOTTOM"];
       const groups = [];
 
@@ -239,18 +312,6 @@ export class BomManager {
         }
       }
 
-      // 從 SMD sheet 中提取項目信息
-      const smdSheet = workbook.Sheets["SMD"];
-      const projectInfo = {
-        project: this.#extractProjectInfo(smdSheet, "B3", "Product Code:"),
-        description: this.#extractProjectInfo(smdSheet, "B4", "Description:"),
-        pcapn: this.#extractProjectInfo(smdSheet, "F4", "PCA PN:"),
-        version: this.#extractProjectInfo(smdSheet, "H3", "BOM Version:"),
-        phase: this.#extractProjectInfo(smdSheet, "J3", "Phase:"),
-        date: this.#extractProjectInfo(smdSheet, "H4", "Date:"),
-        filename: filename,
-      };
-
       // 創建或更新 BOM
       const bom = await db.createBOM(projectInfo);
 
@@ -259,7 +320,9 @@ export class BomManager {
         await db.createGroup(bom._id, groupData);
       }
     } catch (error) {
-      //log.error("Parse Common BOM failed:", error);
+      if (error.message === "USER_CANCELLED") {
+        log.warn(`使用者選擇不導入 ${filename}`);
+      }
       throw error;
     }
   }

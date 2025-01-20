@@ -302,9 +302,7 @@ export class BomModel {
       const uniquePhases = new Set(boms.map((b) => b.phase));
 
       // 計算 BOM 總數
-      const bomCount = new Set(
-        boms.map((b) => `${b.project}_${b.phase}_${b.version}`)
-      );
+      const bomCount = new Set(boms.map((b) => `${b.project}_${b.phase}_${b.version}`));
 
       return {
         projectCount: uniqueProjects.size,
@@ -330,16 +328,10 @@ export class BomModel {
   async deleteBOMs(bomIds) {
     try {
       // 刪除指定的 BOM 記錄
-      const deleteResult = await this.#db.remove(
-        { type: "bom", _id: { $in: bomIds } },
-        { multi: true }
-      );
+      const deleteResult = await this.#db.remove({ type: "bom", _id: { $in: bomIds } }, { multi: true });
 
       // 刪除相關的 groups
-      await this.#db.remove(
-        { type: "group", bomId: { $in: bomIds } },
-        { multi: true }
-      );
+      await this.#db.remove({ type: "group", bomId: { $in: bomIds } }, { multi: true });
 
       log.log(`Deleted ${deleteResult} BOMs and their groups`);
       return deleteResult;
