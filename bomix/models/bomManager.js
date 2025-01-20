@@ -90,8 +90,18 @@ export class BomManager {
             await this.#parseMatrixBOM(file.workbook, filename);
             SessionLog.push(result, `成功導入 Matrix BOM: ${filename}`, SessionLog.LEVEL.INFO);
           } catch (error) {
-            SessionLog.push(result, `導入 Matrix BOM 失敗: ${filename} - ${error.message}`, SessionLog.LEVEL.ERROR);
-            log.error(`Parse Matrix BOM failed for file ${filename}:`, error);
+            // 處理特定的錯誤類型
+            if (error.message.startsWith("COMMON_BOM_NOT_FOUND:")) {
+              const [, project, version, phase] = error.message.split(":");
+              SessionLog.push(
+                result,
+                `導入 Matrix BOM 失敗: ${filename} - 找不到對應的 Common BOM (${project}_${phase}_${version})，請先導入 Common BOM。`,
+                SessionLog.LEVEL.WARNING
+              );
+            } else {
+              SessionLog.push(result, `導入 Matrix BOM 失敗: ${filename} - ${error.message}`, SessionLog.LEVEL.ERROR);
+              log.error(`Parse Matrix BOM failed for file ${filename}:`, error);
+            }
           }
         })
       );
@@ -327,6 +337,11 @@ export class BomManager {
   }
 
   async #parseMatrixBOM(workbook, filename) {
+    const db = this.getCurrentDatabase();
+    if (!db) {
+      throw new Error("NO_DATABASE");
+    }
+
     try {
       const groups = [];
       const sheets = ["SMD", "PTH", "BOTTOM"];
@@ -343,12 +358,17 @@ export class BomManager {
         filename: filename,
       };
 
-      return {
-        project: projectInfo,
-        groups: groups,
-      };
+      // 檢查是否存在對應的 common BOM
+      const existingBOM = await db.findExistingBOM({
+        project: projectInfo.project,
+        phase: projectInfo.phase,
+        version: projectInfo.version,
+      });
+
+      if (!existingBOM) {
+        throw new Error(`COMMON_BOM_NOT_FOUND:${projectInfo.project}:${projectInfo.version}:${projectInfo.phase}`);
+      }
     } catch (error) {
-      log.error("Parse Matrix BOM failed:", error);
       throw error;
     }
   }
