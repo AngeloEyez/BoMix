@@ -343,9 +343,6 @@ export class BomManager {
     }
 
     try {
-      const groups = [];
-      const sheets = ["SMD", "PTH", "BOTTOM"];
-
       // 從 SMD sheet 中提取項目信息
       const smdSheet = workbook.Sheets["SMD"];
       const projectInfo = {
@@ -368,9 +365,138 @@ export class BomManager {
       if (!existingBOM) {
         throw new Error(`COMMON_BOM_NOT_FOUND:${projectInfo.project}:${projectInfo.version}:${projectInfo.phase}`);
       }
+
+      // 獲取 existingBOM 的所有 groups
+      const existingGroups = await db.getGroupsByBOMId(existingBOM._id);
+
+      // 計算 matrix 數量
+      const matrixCount = this.#getMatrixCount(smdSheet);
+
+      // 開始處理每個工作表
+      const sheets = ["SMD", "PTH", "BOTTOM"];
+      const matrixGroups = [];
+
+      // 處理每個 worksheet, 建立 matrixGroups
+      for (const sheetName of sheets) {
+        const sheet = workbook.Sheets[sheetName];
+        if (!sheet) continue; // 如果工作表不存在則跳過
+
+        const range = XLSX.utils.decode_range(sheet["!ref"]);
+        let currentGroup = null;
+
+        // 從第6列開始處理（跳過標題行）
+        for (let row = 5; row <= range.e.r; row++) {
+          // 獲取當前行的所有數據
+          const rowData = {
+            item: this.#getCellValue(sheet, row, 0), // A列: Item
+            hhpn: this.#getCellValue(sheet, row, 1), // B列: HHPN
+            stdpn: this.#getCellValue(sheet, row, 2), // C列: stdpn
+            description: this.#getCellValue(sheet, row, 3), // D列: description
+            mfg: this.#getCellValue(sheet, row, 4), // E列: MFG
+            mfgpn: this.#getCellValue(sheet, row, 5), // F列: mfgpn
+            qty: this.#getCellValue(sheet, row, 6), // G列: Qty
+            location: this.#getCellValue(sheet, row, 7), // H列: Location
+            matrix: {},
+            remark: this.#getCellValue(sheet, row, 10 + matrixCount), // 最後一欄為 remark
+          };
+
+          // 讀取 matrix 資料
+          for (let i = 0; i < matrixCount; i++) {
+            rowData.matrix[i] = this.#getCellValue(sheet, row, 10 + i); // 從K列(index 10)開始
+          }
+
+          // 跳過空行
+          if (!rowData.hhpn || !rowData.mfgpn) continue;
+
+          // 如果有 item，建立新的 group
+          if (rowData.item) {
+            // 如果之前有 group，先將其加入到 matrixGroups
+            if (currentGroup) {
+              matrixGroups.push(currentGroup);
+            }
+
+            // 建立新的 group
+            currentGroup = {
+              process: sheetName,
+              item: rowData.item,
+              qty: rowData.qty,
+              location: rowData.location,
+              matrix: {},
+              parts: [],
+              mfgpnKey: `${rowData.mfg}_${rowData.mfgpn}`, // 添加 mfgpnKey，使用 mfg 和 mfgpn 組合
+            };
+
+            // 初始化 matrix 結構
+            for (let i = 0; i < matrixCount; i++) {
+              currentGroup.matrix[i] = [];
+            }
+          }
+
+          // 如果有當前 group，添加零件資訊
+          if (currentGroup) {
+            // 添加零件資訊
+            const part = {
+              hhpn: rowData.hhpn,
+              description: rowData.description,
+              mfg: rowData.mfg,
+              mfgpn: rowData.mfgpn,
+              remark: rowData.remark,
+            };
+            currentGroup.parts.push(part);
+
+            // 處理每個 matrix 的資料
+            for (let i = 0; i < matrixCount; i++) {
+              if (rowData.matrix[i] === "V" || rowData.matrix[i] === "v") {
+                // 如果該 matrix 有值
+                const mfgKey = `${rowData.mfg}_${rowData.mfgpn}`;
+                currentGroup.matrix[i] = mfgKey;
+              }
+            }
+          }
+        }
+
+        // 處理最後一個 group
+        if (currentGroup) {
+          matrixGroups.push(currentGroup);
+        }
+      }
+
+      // 處理每個 matrix group，更新到 existingBOM 中
+      for (const matrixGroup of matrixGroups) {
+        // 在 existingGroups 中尋找所有 mfgpnKey 匹配的 groups
+        const matchingGroups = existingGroups.filter((group) => group.mfgpnKey === matrixGroup.mfgpnKey);
+
+        // 如果找到匹配的 groups，更新它們的 matrix
+        if (matchingGroups.length > 0) {
+          await Promise.all(matchingGroups.map((group) => db.updateGroup(existingBOM._id, group._id, { matrix: matrixGroup.matrix })));
+          log.log(`Updated matrix for ${matchingGroups.length} groups with mfgpnKey: ${matrixGroup.mfgpnKey}`);
+        } else {
+          log.warn(`No matching groups found for matrix group with mfgpnKey: ${matrixGroup.mfgpnKey}`);
+        }
+      }
     } catch (error) {
       throw error;
     }
+  }
+
+  /**
+   * 計算 matrix 的數量
+   * @param {Object} sheet - Excel工作表對象
+   * @returns {number} - matrix的數量
+   */
+  #getMatrixCount(sheet) {
+    let count = 0;
+    let col = 10; // 從K列開始 (index 10)
+
+    // 讀取第4列（matrix 名稱所在行）
+    while (true) {
+      const value = this.#getCellValue(sheet, 3, col);
+      if (!value) break;
+      count++;
+      col++;
+    }
+
+    return count;
   }
 
   async selectOrCreateDatabase() {
