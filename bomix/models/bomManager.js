@@ -29,31 +29,50 @@ export class BomManager {
     for (const file of files) {
       const filePath = file.path;
       if (!filePath) {
-        SessionLog.push(result, `無效的文件路徑: ${filePath}`, SessionLog.LEVEL.ERROR);
-        log.error("Invalid file path:", filePath);
+        SessionLog.push(result, `無效的文件路徑: ${filePath}`, SessionLog.LEVEL.WARNING);
+        log.warn("Invalid file path:", filePath);
         continue;
       }
+      const filename = path.basename(filePath);
 
       try {
         // 讀取 Excel 文件
         const workbook = await this.readExcelFile(filePath);
-        // 解析 Excel 數據
-        const bomData = await this.parseExcelData(workbook, path.basename(filePath));
 
-        // 創建或更新 BOM
-        const bom = await db.createBOM(bomData.project);
+        // 檢查 BOM 類型
+        const bomType = this.detectBOMType(workbook);
+        log.log(`Detected BOM type: ${bomType} for file ${filename}`);
 
-        // 創建所有 groups
-        for (const groupData of bomData.groups) {
-          await db.createGroup(bom._id, groupData);
+        // 根據不同類型解析數據
+        switch (bomType) {
+          case "commonBOM":
+            try {
+              await this.#parseCommonBOM(workbook, filename);
+              SessionLog.push(result, `成功導入 Common BOM: ${filename}`, SessionLog.LEVEL.INFORMATION);
+            } catch (error) {
+              SessionLog.push(result, `導入 Common BOM 失敗: ${filename} 錯誤: ${error.message}`, SessionLog.LEVEL.ERROR);
+              log.error(`Parse Common BOM failed for file ${filename}:`, error);
+              continue;
+            }
+            break;
+          case "matrixBOM":
+            try {
+              await this.#parseMatrixBOM(workbook, filename);
+              SessionLog.push(result, `成功導入 Matrix BOM: ${filename}`, SessionLog.LEVEL.INFORMATION);
+            } catch (error) {
+              SessionLog.push(result, `導入 Matrix BOM 失敗: ${filename} 錯誤: ${error.message}`, SessionLog.LEVEL.ERROR);
+              log.error(`Parse Matrix BOM failed for file ${filename}:`, error);
+              continue;
+            }
+            break;
+          default:
+            SessionLog.push(result, `不支援的 BOM 類型: ${filename}`, SessionLog.LEVEL.WARNING);
+            continue;
         }
-
-        // 記錄成功信息
-        SessionLog.push(result, `成功導入 BOM 文件: ${path.basename(filePath)}`, SessionLog.LEVEL.INFORMATION);
       } catch (error) {
         // 記錄錯誤信息
-        SessionLog.push(result, `導入文件 ${path.basename(filePath)} 失敗: ${error.message}`, SessionLog.LEVEL.ERROR);
-        log.error(`Failed to import file ${filePath}:`, error);
+        SessionLog.push(result, `導入文件失敗: ${filename} 錯誤: ${error.message}`, SessionLog.LEVEL.ERROR);
+        log.error(`Failed to import file ${filename}:`, error);
       }
     }
   }
@@ -106,30 +125,9 @@ export class BomManager {
         }
       }
 
-      throw new Error("無法識別的 BOM 格式");
+      return "unknown BOM type";
     } catch (error) {
       log.error("Detect BOM type failed:", error);
-      throw error;
-    }
-  }
-
-  async parseExcelData(workbook, filename) {
-    try {
-      // 檢查 BOM 類型
-      const bomType = this.detectBOMType(workbook);
-      log.log("Detected BOM type:", bomType);
-
-      // 根據不同類型解析數據
-      switch (bomType) {
-        case "commonBOM":
-          return await this.#parseCommonBOM(workbook, filename);
-        case "matrixBOM":
-          return await this.#parseMatrixBOM(workbook, filename);
-        default:
-          throw new Error(`不支援的 BOM 類型: ${bomType}`);
-      }
-    } catch (error) {
-      log.error("Parse Excel data failed:", error);
       throw error;
     }
   }
@@ -155,11 +153,7 @@ export class BomManager {
 
   #extractProjectInfo(sheet, cellAddress, prefix) {
     try {
-      const value = this.#getCellValue(
-        sheet,
-        XLSX.utils.decode_cell(cellAddress).r,
-        XLSX.utils.decode_cell(cellAddress).c
-      );
+      const value = this.#getCellValue(sheet, XLSX.utils.decode_cell(cellAddress).r, XLSX.utils.decode_cell(cellAddress).c);
 
       if (!value) return "";
 
@@ -257,12 +251,15 @@ export class BomManager {
         filename: filename,
       };
 
-      return {
-        project: projectInfo,
-        groups: groups,
-      };
+      // 創建或更新 BOM
+      const bom = await db.createBOM(projectInfo);
+
+      // 創建所有 groups
+      for (const groupData of groups) {
+        await db.createGroup(bom._id, groupData);
+      }
     } catch (error) {
-      log.error("Parse Common BOM failed:", error);
+      //log.error("Parse Common BOM failed:", error);
       throw error;
     }
   }

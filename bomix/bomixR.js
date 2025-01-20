@@ -37,10 +37,7 @@ export class BoMixR {
     const timestamp = new Date().toLocaleTimeString();
     const newLogs = logsArray.map((log) => {
       // 如果輸入是字符串，轉換為物件格式
-      const logObj =
-        typeof log === "string"
-          ? { message: log, level: SessionLog.LEVEL.INFO }
-          : { ...log };
+      const logObj = typeof log === "string" ? { message: log, level: SessionLog.LEVEL.INFO } : { ...log };
 
       // 確保有默認的 level
       if (!logObj.level) {
@@ -58,25 +55,22 @@ export class BoMixR {
 
     // 如果超過最大數量，刪除較舊的日誌
     if (this.#sessionLogs.value.length > SessionLog.MAX_LOGS) {
-      this.#sessionLogs.value = this.#sessionLogs.value.slice(
-        0,
-        SessionLog.MAX_LOGS
-      );
+      this.#sessionLogs.value = this.#sessionLogs.value.slice(0, SessionLog.MAX_LOGS);
     }
 
     // 同時記錄到系統日誌
-    newLogs.forEach((l) => {
-      switch (l.level) {
-        case SessionLog.LEVEL.WARNING:
-          log.warn(l.message);
-          break;
-        case SessionLog.LEVEL.ERROR:
-          log.error(l.message);
-          break;
-        default:
-          log.log(l.message);
-      }
-    });
+    // newLogs.forEach((l) => {
+    //   switch (l.level) {
+    //     case SessionLog.LEVEL.WARNING:
+    //       log.warn(l.message);
+    //       break;
+    //     case SessionLog.LEVEL.ERROR:
+    //       log.error(l.message);
+    //       break;
+    //     default:
+    //       log.log(l.message);
+    //   }
+    // });
   }
 
   // 獲取系統日誌
