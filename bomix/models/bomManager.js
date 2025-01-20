@@ -3,6 +3,8 @@ import * as XLSX from "xlsx";
 import fs from "fs/promises";
 import { BomModel } from "./bomModel";
 import log from "../utils/logger";
+import path from "path";
+import { SessionLog } from "../sessionLog";
 
 export class BomManager {
   #currentDb = null;
@@ -10,6 +12,50 @@ export class BomManager {
 
   constructor(configManager) {
     this.#configManager = configManager;
+  }
+
+  /**
+   * 導入多個 BOM 文件
+   * @param {Array} files 要導入的文件列表，每個文件包含 path 屬性
+   * @param {Array} result 用於收集導入結果的數組
+   * @returns {Promise<void>}
+   */
+  async importBOMs(files, result) {
+    const db = this.getCurrentDatabase();
+    if (!db) {
+      throw new Error("NO_DATABASE");
+    }
+
+    for (const file of files) {
+      const filePath = file.path;
+      if (!filePath) {
+        SessionLog.push(result, `無效的文件路徑: ${filePath}`, SessionLog.LEVEL.ERROR);
+        log.error("Invalid file path:", filePath);
+        continue;
+      }
+
+      try {
+        // 讀取 Excel 文件
+        const workbook = await this.readExcelFile(filePath);
+        // 解析 Excel 數據
+        const bomData = await this.parseExcelData(workbook, path.basename(filePath));
+
+        // 創建或更新 BOM
+        const bom = await db.createBOM(bomData.project);
+
+        // 創建所有 groups
+        for (const groupData of bomData.groups) {
+          await db.createGroup(bom._id, groupData);
+        }
+
+        // 記錄成功信息
+        SessionLog.push(result, `成功導入 BOM 文件: ${path.basename(filePath)}`, SessionLog.LEVEL.INFORMATION);
+      } catch (error) {
+        // 記錄錯誤信息
+        SessionLog.push(result, `導入文件 ${path.basename(filePath)} 失敗: ${error.message}`, SessionLog.LEVEL.ERROR);
+        log.error(`Failed to import file ${filePath}:`, error);
+      }
+    }
   }
 
   async readExcelFile(filePath) {
@@ -28,9 +74,7 @@ export class BomManager {
 
       // 檢查 commonBOM
       const commonSheets = ["ALL", "SMD", "PTH", "BOTTOM", "MP"];
-      const hasCommonSheets = commonSheets.every((sheet) =>
-        sheets.includes(sheet)
-      );
+      const hasCommonSheets = commonSheets.every((sheet) => sheets.includes(sheet));
 
       if (hasCommonSheets) {
         // 檢查所有 commonSheets 的第5列是否都有13個項目
@@ -47,9 +91,7 @@ export class BomManager {
 
       // 檢查 matrixBOM
       const matrixSheets = ["SMD", "PTH"];
-      const hasMatrixSheets = matrixSheets.every((sheet) =>
-        sheets.includes(sheet)
-      );
+      const hasMatrixSheets = matrixSheets.every((sheet) => sheets.includes(sheet));
 
       if (hasMatrixSheets) {
         // 檢查所有 matrixSheets 的第5列是否都有17個項目

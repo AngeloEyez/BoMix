@@ -247,38 +247,8 @@ export class BoMixM {
               filesToProcess = data.files;
             }
 
-            for (const file of filesToProcess) {
-              const filePath = file.path;
-              if (!filePath) {
-                SessionLog.push(
-                  result,
-                  `Invalid file path: ${filePath}`,
-                  SessionLog.LEVEL.ERROR
-                );
-                log.error("Invalid file path:", filePath);
-                continue;
-              } else {
-                SessionLog.push(
-                  result,
-                  `成功導入 BOM 文件: ${filePath}`,
-                  SessionLog.LEVEL.INFORMATION
-                );
-              }
-
-              const workbook = await this.#bomManager.readExcelFile(filePath);
-              const bomData = await this.#bomManager.parseExcelData(
-                workbook,
-                path.basename(filePath)
-              );
-
-              // 創建或更新 BOM
-              const bom = await db.createBOM(bomData.project);
-
-              // 創建所有 groups
-              for (const groupData of bomData.groups) {
-                await db.createGroup(bom._id, groupData);
-              }
-            }
+            // 使用 BomManager 的 importBOMs 方法處理導入
+            await this.#bomManager.importBOMs(filesToProcess, result);
 
             return {
               status: "success",
