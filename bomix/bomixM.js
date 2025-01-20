@@ -53,10 +53,7 @@ export class BoMixM {
         await this.#bomManager.closeCurrentDatabase();
         app.exit(1);
       } catch (closeError) {
-        log.error(
-          "Error closing database after uncaught exception:",
-          closeError
-        );
+        log.error("Error closing database after uncaught exception:", closeError);
         app.exit(1);
       }
     });
@@ -92,11 +89,7 @@ export class BoMixM {
 
         case "init-database":
           try {
-            const db = await this.#bomManager.initDatabase(
-              data.path,
-              data.seriesName,
-              data.seriesNote
-            );
+            const db = await this.#bomManager.initDatabase(data.path, data.seriesName, data.seriesNote);
             return { status: "success", content: await db.getSeriesInfo() };
           } catch (error) {
             return { status: "error", message: error.message };
@@ -150,11 +143,7 @@ export class BoMixM {
             };
           } catch (error) {
             // 如果打開失敗，創建新數據庫
-            const db = await this.#bomManager.initDatabase(
-              data.path,
-              "New Series",
-              ""
-            );
+            const db = await this.#bomManager.initDatabase(data.path, "New Series", "");
             const seriesInfo = await db.getSeriesInfo();
             return {
               status: "success",
@@ -222,11 +211,7 @@ export class BoMixM {
             let filesToProcess = [];
 
             // 如果沒有有效的文件數據，打開文件選擇對話框
-            if (
-              !data.files ||
-              !Array.isArray(data.files) ||
-              data.files.length === 0
-            ) {
+            if (!data.files || !Array.isArray(data.files) || data.files.length === 0) {
               const result = await dialog.showOpenDialog({
                 properties: ["openFile", "multiSelections"],
                 filters: [
@@ -255,11 +240,7 @@ export class BoMixM {
               message: result,
             };
           } catch (error) {
-            SessionLog.push(
-              result,
-              `Import Excel files failed: ${error.message}`,
-              SessionLog.LEVEL.ERROR
-            );
+            SessionLog.push(result, `Import Excel files failed: ${error.message}`, SessionLog.LEVEL.ERROR);
             log.error("Import Excel files failed:", error);
             return { status: "error", message: result };
           }

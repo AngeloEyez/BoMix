@@ -231,8 +231,7 @@ export class BomManager {
 最後更新: ${new Date(existingBOM.updatedAt).toLocaleString()}
 
 ⚠ ！！！警告！！！
-覆蓋此 BOM 將會清空該 BOM 的所有 Matrix 信息
-⚠ ！！！警告！！！`,
+覆蓋此 BOM 將會清空該 BOM 的所有 Matrix 信息`,
           buttons: ["覆蓋", "取消"],
           defaultId: 1,
           cancelId: 1,
@@ -331,10 +330,6 @@ export class BomManager {
     try {
       const groups = [];
       const sheets = ["SMD", "PTH", "BOTTOM"];
-
-      for (const sheetName of sheets) {
-        console.log(sheetName);
-      }
 
       // 從 SMD sheet 中提取項目信息
       const smdSheet = workbook.Sheets["SMD"];

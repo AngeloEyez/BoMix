@@ -7,37 +7,37 @@
 </template>
 
 <script setup>
-import log from "app/bomix/utils/logger";
-import { provide, ref, onMounted } from "vue";
-import { BoMixR } from "app/bomix/bomixR";
+  import log from "app/bomix/utils/logger";
+  import { provide, ref, onMounted } from "vue";
+  import { BoMixR } from "app/bomix/bomixR";
 
-log.log("App initializing...");
-const bomix = new BoMixR();
-const isInitialized = ref(false);
+  log.log("App initializing...");
+  const bomix = new BoMixR();
+  const isInitialized = ref(false);
 
-onMounted(async () => {
-  try {
-    await bomix.ensureInitialized();
-    isInitialized.value = true;
-    log.log("App initialized successfully");
-  } catch (error) {
-    log.error("Failed to initialize app:", error);
-  }
-});
+  onMounted(async () => {
+    try {
+      await bomix.ensureInitialized();
+      isInitialized.value = true;
+      log.log("App initialized successfully");
+    } catch (error) {
+      log.error("Failed to initialize app:", error);
+    }
+  });
 
-provide("BoMix", bomix);
+  provide("BoMix", bomix);
 
-defineOptions({
-  name: "App",
-});
+  defineOptions({
+    name: "App",
+  });
 </script>
 
 <style scoped>
-.loading-container {
-  height: 100vh;
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-  align-items: center;
-}
+  .loading-container {
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+  }
 </style>
