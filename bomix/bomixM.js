@@ -143,6 +143,7 @@ export class BoMixM {
             };
           } catch (error) {
             // 如果打開失敗，創建新數據庫
+            log.error(error);
             const db = await this.#bomManager.initDatabase(data.path, "New Series", "");
             const seriesInfo = await db.getSeriesInfo();
             return {

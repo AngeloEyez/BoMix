@@ -107,6 +107,9 @@ export class BoMixR {
   }
 
   // 獲取 series info
+  get seriesInfo() {
+    return this.#seriesInfo;
+  }
   getSeriesInfo() {
     return this.#seriesInfo;
   }
@@ -138,9 +141,9 @@ export class BoMixR {
             filename: response.content.filename || "",
             config: response.content.config || {
               selectedBOMs: {
-                common: undefined,
-                matrix: undefined,
-                bccl: undefined,
+                common: [],
+                matrix: [],
+                bccl: [],
               },
             },
           };
@@ -152,9 +155,9 @@ export class BoMixR {
             filename: "",
             config: {
               selectedBOMs: {
-                common: undefined,
-                matrix: undefined,
-                bccl: undefined,
+                common: [],
+                matrix: [],
+                bccl: [],
               },
             },
           };
