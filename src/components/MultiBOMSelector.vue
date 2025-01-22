@@ -185,23 +185,23 @@
     selectedTargetItems.value = [];
   };
 
-  // 監聽目標列表變化，更新 seriesInfo.config
+  // 監聽目標列表變化，更新 seriesInfo
   watch(
     targetBOMs,
     async (newValue) => {
       const selectedIds = newValue.map((bom) => bom._id);
       const currentConfig = bomix.seriesInfo?.value?.config || { selectedBOMs: {} };
 
-      const newConfig = {
-        ...currentConfig,
-        selectedBOMs: {
-          ...currentConfig.selectedBOMs,
-          [props.bomType]: selectedIds,
-        },
-      };
-
       try {
-        await bomix.updateSeriesConfig(newConfig);
+        await bomix.updateSeriesInfo({
+          config: {
+            ...currentConfig,
+            selectedBOMs: {
+              ...currentConfig.selectedBOMs,
+              [props.bomType]: selectedIds,
+            },
+          },
+        });
       } catch (error) {
         console.error("Failed to update selected BOMs:", error);
         $q.notify({

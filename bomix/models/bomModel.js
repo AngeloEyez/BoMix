@@ -271,30 +271,31 @@ export class BomModel {
     }
   }
 
+  /**
+   * 更新 Series 資訊
+   * @param {Object} seriesData - 新的 series 資訊
+   * @returns {Promise<Object>} 更新後的 Series 資訊
+   */
   async updateSeriesInfo(seriesData) {
     try {
       if (!this.#seriesInfo) {
-        // 如果沒有初始化，則創建一個新的
         this.#seriesInfo = this.#initSeriesInfo();
       }
 
-      const updatedSeries = await this.#db.update(
-        { type: "series" },
-        {
-          $set: {
-            ...this.#normalizeData(seriesData),
-            path: this.#dbPath,
-            filename: path.parse(this.#dbPath).name,
-            updatedAt: new Date(),
-          },
-        },
-        { returnUpdatedDocs: true, upsert: true }
-      );
+      // 合併現有的 config 與新的 seriesData
+      const updatedData = {
+        //...this.#seriesInfo,
+        ...this.#normalizeData(seriesData),
+        path: this.#dbPath,
+        filename: path.parse(this.#dbPath).name,
+        updatedAt: new Date(),
+      };
+
+      const updatedSeries = await this.#db.update({ type: "series" }, { $set: updatedData }, { returnUpdatedDocs: true, upsert: true });
 
       // 更新快取的系列資訊
       this.#seriesInfo = updatedSeries;
 
-      //log.log("Series info updated:", updatedSeries);
       return updatedSeries;
     } catch (error) {
       log.error("Failed to update series info:", error);
@@ -387,38 +388,6 @@ export class BomModel {
       //log.log(`Updated matrix for group ${groupId}:`, updateData.matrix);
     } catch (error) {
       log.error(`Failed to update matrix for group ${groupId}:`, error);
-      throw error;
-    }
-  }
-
-  /**
-   * 更新 Series 的 config
-   * @param {Object} config - 新的 config 物件
-   * @returns {Promise<Object>} 更新後的 Series 資訊
-   */
-  async updateSeriesConfig(config) {
-    try {
-      if (!this.#seriesInfo || !this.#seriesInfo._id) {
-        throw new Error("Series not initialized");
-      }
-
-      const updateData = {
-        config,
-        updatedAt: new Date(),
-      };
-
-      await this.#db.update({ _id: this.#seriesInfo._id }, { $set: updateData });
-
-      // 更新快取的 seriesInfo
-      this.#seriesInfo = {
-        ...this.#seriesInfo,
-        ...updateData,
-      };
-
-      log.log("Series config updated");
-      return this.#seriesInfo;
-    } catch (error) {
-      log.error("Failed to update series config:", error);
       throw error;
     }
   }

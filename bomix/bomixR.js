@@ -167,45 +167,19 @@ export class BoMixR {
   }
 
   // 更新 series 信息
-  async updateSeriesInfo(name, note) {
+  async updateSeriesInfo(seriesData) {
     try {
-      const response = await window.BoMixAPI.sendAction("update-series", {
-        name,
-        note,
-      });
+      const response = await window.BoMixAPI.sendAction("update-series", seriesData);
       if (response.status === "success" && response.content) {
         this.#seriesInfo.value = {
-          name: response.content.name,
-          note: response.content.note,
-          path: response.content.path,
-          filename: response.content.filename,
-          config: response.content.config,
+          ...this.#seriesInfo.value,
+          ...response.content,
         };
       } else {
         throw new Error(response.message || "更新系列信息失敗");
       }
     } catch (error) {
       log.error("Update series info failed:", error);
-      throw error;
-    }
-  }
-
-  // 更新 series config
-  async updateSeriesConfig(config) {
-    try {
-      const response = await window.BoMixAPI.sendAction("update-series-config", {
-        config,
-      });
-      if (response.status === "success" && response.content) {
-        this.#seriesInfo.value = {
-          ...this.#seriesInfo.value,
-          config: response.content.config,
-        };
-      } else {
-        throw new Error(response.message || "更新系列設定失敗");
-      }
-    } catch (error) {
-      log.error("Update series config failed:", error);
       throw error;
     }
   }
