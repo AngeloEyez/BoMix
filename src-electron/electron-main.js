@@ -18,9 +18,9 @@ function createWindow() {
   mainWindow = new BrowserWindow({
     icon: path.resolve(__dirname, "icons/icon.png"), // tray icon
     minWidth: 800,
-    minHeight: 800,
+    minHeight: 700,
     width: 1500,
-    height: 800,
+    height: 700,
     useContentSize: true,
     webPreferences: {
       contextIsolation: true,
@@ -28,6 +28,9 @@ function createWindow() {
       preload: path.resolve(__dirname, process.env.QUASAR_ELECTRON_PRELOAD),
     },
   });
+
+  // 完全隱藏菜單列
+  mainWindow.setMenu(null); // 設置菜單為 null
 
   mainWindow.loadURL(process.env.APP_URL);
 
