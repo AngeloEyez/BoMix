@@ -15,7 +15,7 @@ export class BoMixM {
     this.#bomManager = new BomManager(this.#configManager);
     this.#setupIpcHandlers();
     this.#setupAppHandlers(); //應用程序級別的事件
-    log.log("BoMixR: All initialized");
+    log.log("BoMixM: Initialized");
   }
 
   #setupAppHandlers() {
@@ -257,6 +257,6 @@ export class BoMixM {
       return result.canceled ? null : result.filePaths[0];
     });
 
-    log.log("BoMixR: IPC initialized.");
+    log.log("BoMixM: ipc initialized..");
   }
 }

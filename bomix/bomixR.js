@@ -118,9 +118,9 @@ export class BoMixR {
       if (response.status === "success" && response.content) {
         Object.assign(this.#config.value, response.content);
       }
-      log.log("BoMixR - load config:", this.#config.value);
+      log.log("BoMixR: load config:", this.#config.value);
     } catch (error) {
-      log.error("BoMixR - Failed to load config :", error);
+      log.error("BoMixR: Failed to load config :", error);
       throw error;
     }
   }

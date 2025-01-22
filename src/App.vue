@@ -11,7 +11,7 @@
   import { provide, ref, onMounted } from "vue";
   import { BoMixR } from "app/bomix/bomixR";
 
-  log.log("App initializing...");
+  log.log("BoMixR: initializing...");
   const bomix = new BoMixR();
   const isInitialized = ref(false);
 
@@ -19,9 +19,9 @@
     try {
       await bomix.ensureInitialized();
       isInitialized.value = true;
-      log.log("App initialized successfully");
+      log.log("BoMixR: App initialized successfully");
     } catch (error) {
-      log.error("Failed to initialize app:", error);
+      log.error("BoMixR: Failed to initialize app:", error);
     }
   });
 
