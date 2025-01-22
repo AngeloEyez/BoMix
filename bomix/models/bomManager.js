@@ -376,7 +376,22 @@ export class BomManager {
       const sheets = ["SMD", "PTH", "BOTTOM"];
       const matrixGroups = [];
 
-      // 處理每個 worksheet, 建立 matrixGroups
+      // 定義建立 group matrix data 的區域函式, 並push到matrixGroups
+      const buildGroupMatrixData = (group) => {
+        for (let i = 0; i < matrixCount; i++) {
+          group.matrix[i] = undefined; // 預設為 undefined
+          // 檢查所有 parts
+          for (const part of group.parts) {
+            if (part.matrix[i] === "V" || part.matrix[i] === "v") {
+              group.matrix[i] = `${part.mfg}_${part.mfgpn}`;
+              break; // 找到第一個符合的就跳出
+            }
+          }
+        }
+        matrixGroups.push(group);
+      };
+
+      // 處理每個 worksheet
       for (const sheetName of sheets) {
         const sheet = workbook.Sheets[sheetName];
         if (!sheet) continue; // 如果工作表不存在則跳過
@@ -410,9 +425,9 @@ export class BomManager {
 
           // 如果有 item，建立新的 group
           if (rowData.item) {
-            // 如果之前有 group，先將其加入到 matrixGroups
+            // 如果之前有 group，先建立其 matrix 資料並加入到 matrixGroups
             if (currentGroup) {
-              matrixGroups.push(currentGroup);
+              buildGroupMatrixData(currentGroup);
             }
 
             // 建立新的 group
@@ -425,39 +440,32 @@ export class BomManager {
               parts: [],
               mfgpnKey: `${rowData.mfg}_${rowData.mfgpn}`, // 添加 mfgpnKey，使用 mfg 和 mfgpn 組合
             };
-
-            // 初始化 matrix 結構
-            for (let i = 0; i < matrixCount; i++) {
-              currentGroup.matrix[i] = [];
-            }
           }
 
           // 如果有當前 group，添加零件資訊
           if (currentGroup) {
-            // 添加零件資訊
+            // 添加零件資訊，包含 matrix 資料
             const part = {
               hhpn: rowData.hhpn,
               description: rowData.description,
               mfg: rowData.mfg,
               mfgpn: rowData.mfgpn,
               remark: rowData.remark,
+              matrix: {}, // 添加 matrix 資料到 part
             };
-            currentGroup.parts.push(part);
 
-            // 處理每個 matrix 的資料
+            // 讀取每個 matrix 的值到 part
             for (let i = 0; i < matrixCount; i++) {
-              if (rowData.matrix[i] === "V" || rowData.matrix[i] === "v") {
-                // 如果該 matrix 有值
-                const mfgKey = `${rowData.mfg}_${rowData.mfgpn}`;
-                currentGroup.matrix[i] = mfgKey;
-              }
+              part.matrix[i] = rowData.matrix[i];
             }
+
+            currentGroup.parts.push(part);
           }
         }
 
         // 處理最後一個 group
         if (currentGroup) {
-          matrixGroups.push(currentGroup);
+          buildGroupMatrixData(currentGroup);
         }
       }
 
@@ -468,8 +476,8 @@ export class BomManager {
 
         // 如果找到匹配的 groups，更新它們的 matrix
         if (matchingGroups.length > 0) {
-          await Promise.all(matchingGroups.map((group) => db.updateGroup(existingBOM._id, group._id, { matrix: matrixGroup.matrix })));
-          log.log(`Updated matrix for ${matchingGroups.length} groups with mfgpnKey: ${matrixGroup.mfgpnKey}`);
+          await Promise.all(matchingGroups.map((group) => db.updateMatrix(group._id, matrixGroup.matrix)));
+          //log.log(`Updated matrix for ${matchingGroups.length} groups with mfgpnKey: ${matrixGroup.mfgpnKey}`);
         } else {
           log.warn(`No matching groups found for matrix group with mfgpnKey: ${matrixGroup.mfgpnKey}`);
         }

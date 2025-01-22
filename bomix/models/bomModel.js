@@ -1,3 +1,23 @@
+/**
+ * BOM 資料庫模型
+ *
+ * 此模組負責處理 BOM (Bill of Materials) 相關的資料庫操作，包括：
+ * - Series 管理：創建、讀取和更新系列資訊
+ * - BOM 操作：創建、查詢、更新和刪除 BOM
+ * - Group 操作：管理 BOM 中的零件群組
+ * - 資料庫維護：索引創建、資料壓縮等
+ *
+ * 資料結構：
+ * - Series：儲存系列基本資訊
+ * - BOM：包含專案、版本、階段等基本資訊
+ * - Group：包含零件資訊、位置、數量、Matrix等
+ *
+ * @module bomModel
+ * @requires nedb-promises
+ * @requires path
+ * @requires ./utils/logger
+ */
+
 import Datastore from "nedb-promises";
 import path from "path";
 import log from "../utils/logger";
@@ -350,5 +370,32 @@ export class BomModel {
       }
     }
     return obj;
+  }
+
+  /**
+   * 更新指定 group 的 matrix 資料
+   * @param {string} groupId - Group ID
+   * @param {Object} matrix - Matrix 資料
+   * @returns {Promise<void>}
+   */
+  async updateMatrix(groupId, matrix) {
+    try {
+      // 檢查 matrix 是否為空
+      const isMatrixEmpty = Object.values(matrix).every((value) => (Array.isArray(value) ? value.length === 0 : !value));
+
+      // 準備更新的資料
+      const updateData = {
+        matrix: isMatrixEmpty ? undefined : matrix,
+        updatedAt: new Date(),
+      };
+
+      // 更新 group
+      await this.#db.update({ _id: groupId }, { $set: updateData });
+
+      //log.log(`Updated matrix for group ${groupId}:`, updateData.matrix);
+    } catch (error) {
+      log.error(`Failed to update matrix for group ${groupId}:`, error);
+      throw error;
+    }
   }
 }
