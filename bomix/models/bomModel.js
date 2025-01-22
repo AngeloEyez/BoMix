@@ -61,21 +61,37 @@ export class BomModel {
     }
   }
 
+  /**
+   * 初始化或取得 Series 資訊的基本結構
+   * @param {Object} options - 初始化選項
+   * @param {string} options.name - Series 名稱
+   * @param {string} options.note - Series 備註
+   * @returns {Object} 標準化的 Series 資訊物件
+   * @private
+   */
+  #initSeriesInfo(options = {}) {
+    return this.#normalizeData({
+      type: "series",
+      name: options.name || "",
+      note: options.note || "",
+      path: this.#dbPath,
+      filename: path.parse(this.#dbPath).name,
+      config: {
+        selectedBOMs: {
+          common: undefined,
+          matrix: undefined,
+          bccl: undefined,
+        },
+      },
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    });
+  }
+
   // Series 操作
   async initSeries(name, note = "") {
     try {
-      const filename = path.parse(this.#dbPath).name;
-      const series = this.#normalizeData({
-        type: "series",
-        name,
-        note: note,
-        path: this.#dbPath,
-        filename: filename,
-        createdAt: new Date(),
-        updatedAt: new Date(),
-      });
-
-      this.#seriesInfo = await this.#db.insert(series);
+      this.#seriesInfo = await this.#db.insert(this.#initSeriesInfo({ name, note }));
       log.log("Series initialized:", this.#seriesInfo);
       return this.#seriesInfo;
     } catch (error) {
@@ -91,23 +107,7 @@ export class BomModel {
 
     // 如果沒有找到 series 信息，創建一個空的對象
     if (!this.#seriesInfo) {
-      this.#seriesInfo = this.#normalizeData({
-        type: "series",
-        name: "",
-        note: "",
-        path: this.#dbPath,
-        filename: path.parse(this.#dbPath).name,
-        createdAt: new Date(),
-        updatedAt: new Date(),
-      });
-    } else {
-      // 確保現有的 seriesInfo 有完整的路徑信息
-      if (!this.#seriesInfo.path) {
-        this.#seriesInfo.path = this.#dbPath;
-      }
-      if (!this.#seriesInfo.filename) {
-        this.#seriesInfo.filename = path.parse(this.#dbPath).name;
-      }
+      this.#seriesInfo = this.#initSeriesInfo();
     }
 
     return this.#seriesInfo;
@@ -275,15 +275,7 @@ export class BomModel {
     try {
       if (!this.#seriesInfo) {
         // 如果沒有初始化，則創建一個新的
-        this.#seriesInfo = this.#normalizeData({
-          type: "series",
-          name: "",
-          note: "",
-          path: this.#dbPath,
-          filename: path.parse(this.#dbPath).name,
-          createdAt: new Date(),
-          updatedAt: new Date(),
-        });
+        this.#seriesInfo = this.#initSeriesInfo();
       }
 
       const updatedSeries = await this.#db.update(
@@ -395,6 +387,38 @@ export class BomModel {
       //log.log(`Updated matrix for group ${groupId}:`, updateData.matrix);
     } catch (error) {
       log.error(`Failed to update matrix for group ${groupId}:`, error);
+      throw error;
+    }
+  }
+
+  /**
+   * 更新 Series 的 config
+   * @param {Object} config - 新的 config 物件
+   * @returns {Promise<Object>} 更新後的 Series 資訊
+   */
+  async updateSeriesConfig(config) {
+    try {
+      if (!this.#seriesInfo || !this.#seriesInfo._id) {
+        throw new Error("Series not initialized");
+      }
+
+      const updateData = {
+        config,
+        updatedAt: new Date(),
+      };
+
+      await this.#db.update({ _id: this.#seriesInfo._id }, { $set: updateData });
+
+      // 更新快取的 seriesInfo
+      this.#seriesInfo = {
+        ...this.#seriesInfo,
+        ...updateData,
+      };
+
+      log.log("Series config updated");
+      return this.#seriesInfo;
+    } catch (error) {
+      log.error("Failed to update series config:", error);
       throw error;
     }
   }

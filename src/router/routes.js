@@ -7,6 +7,10 @@ const routes = [
         path: "",
         component: () => import("pages/Dashboard.vue"),
       },
+      {
+        path: "bom-viewer",
+        component: () => import("pages/BOMViewer.vue"),
+      },
     ],
   },
 

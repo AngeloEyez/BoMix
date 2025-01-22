@@ -136,6 +136,13 @@ export class BoMixR {
             note: response.content.note || "",
             path: response.content.path || "",
             filename: response.content.filename || "",
+            config: response.content.config || {
+              selectedBOMs: {
+                common: undefined,
+                matrix: undefined,
+                bccl: undefined,
+              },
+            },
           };
         } else {
           this.#seriesInfo.value = {
@@ -143,6 +150,13 @@ export class BoMixR {
             note: "",
             path: "",
             filename: "",
+            config: {
+              selectedBOMs: {
+                common: undefined,
+                matrix: undefined,
+                bccl: undefined,
+              },
+            },
           };
         }
       }
@@ -165,12 +179,33 @@ export class BoMixR {
           note: response.content.note,
           path: response.content.path,
           filename: response.content.filename,
+          config: response.content.config,
         };
       } else {
         throw new Error(response.message || "更新系列信息失敗");
       }
     } catch (error) {
       log.error("Update series info failed:", error);
+      throw error;
+    }
+  }
+
+  // 更新 series config
+  async updateSeriesConfig(config) {
+    try {
+      const response = await window.BoMixAPI.sendAction("update-series-config", {
+        config,
+      });
+      if (response.status === "success" && response.content) {
+        this.#seriesInfo.value = {
+          ...this.#seriesInfo.value,
+          config: response.content.config,
+        };
+      } else {
+        throw new Error(response.message || "更新系列設定失敗");
+      }
+    } catch (error) {
+      log.error("Update series config failed:", error);
       throw error;
     }
   }
