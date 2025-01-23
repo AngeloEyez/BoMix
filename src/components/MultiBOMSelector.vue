@@ -416,8 +416,12 @@
 
       selectedSourceItems.value = sourceBOMs.value.slice(start, end + 1).map((bom) => bom._id);
     } else {
-      // 普通點擊：清除其他選擇，只選當前項
-      selectedSourceItems.value = [id];
+      // 普通點擊：如果已選取則取消選取，否則只選當前項
+      if (selectedSourceItems.value.length === 1 && selectedSourceItems.value[0] === id) {
+        selectedSourceItems.value = [];
+      } else {
+        selectedSourceItems.value = [id];
+      }
     }
     lastClickedSource.value = id;
   };
@@ -435,8 +439,12 @@
 
       selectedTargetItems.value = targetBOMs.value.slice(start, end + 1).map((bom) => bom._id);
     } else {
-      // 普通點擊：清除其他選擇，只選當前項
-      selectedTargetItems.value = [id];
+      // 普通點擊：如果已選取則取消選取，否則只選當前項
+      if (selectedTargetItems.value.length === 1 && selectedTargetItems.value[0] === id) {
+        selectedTargetItems.value = [];
+      } else {
+        selectedTargetItems.value = [id];
+      }
     }
     lastClickedTarget.value = id;
   };
