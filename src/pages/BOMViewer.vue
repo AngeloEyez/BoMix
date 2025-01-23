@@ -10,9 +10,12 @@
       <q-btn color="accent" icon="playlist_add" label="選擇 BCCL BOM" @click="showSelector('bccl')" />
     </div>
 
-    <q-dialog v-model="showSelectorDialog">
-      <MultiBOMSelector v-if="showSelectorDialog" :bom-type="currentBomType" />
-    </q-dialog>
+    <!-- 使用 Teleport 將選擇器移到 body 層級 -->
+    <Teleport to="body">
+      <div v-if="showSelectorDialog" class="selector-overlay">
+        <MultiBOMSelector :bom-type="currentBomType" @close="showSelectorDialog = false" />
+      </div>
+    </Teleport>
   </q-page>
 </template>
 
@@ -38,5 +41,18 @@
   .q-page {
     max-width: 1200px;
     margin: 0 auto;
+  }
+
+  .selector-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.4);
+    z-index: 5000;
+    display: flex;
+    justify-content: center;
+    align-items: center;
   }
 </style>

@@ -1,25 +1,27 @@
 /** * BOM 選擇器組件 * 用於選擇和排序要顯示的 BOM 清單 */
 
 <template>
-  <q-card class="bom-selector" ref="dialogRef">
-    <q-resize-observer @resize="onResize" debounce="50" />
-    <div class="resize-handle"></div>
-    <q-card-section class="row items-center q-pb-sm">
+  <div class="bom-selector" ref="cardRef">
+    <!-- 標題列（可拖動區域） -->
+    <div class="titlebar" @mousedown.prevent="startDrag">
       <div class="text-h6">選擇 {{ bomTypeLabel }} BOM</div>
       <q-space />
-      <q-btn icon="close" flat round dense v-close-popup />
-    </q-card-section>
+      <q-btn icon="close" flat round dense @click="$emit('close')" />
+    </div>
 
-    <q-card-section class="q-pa-md q-pt-none">
-      <div class="row q-col-gutter-md">
+    <!-- 主要內容區域 -->
+    <div class="content-area">
+      <div class="row q-col-gutter-md h-100">
         <!-- 左側清單 -->
-        <div class="col-5">
-          <div class="text-subtitle2 q-mb-sm">所有 BOM</div>
-          <q-input v-model="searchText" dense outlined placeholder="搜尋 BOM..." class="q-mb-md">
-            <template v-slot:append>
-              <q-icon name="search" />
-            </template>
-          </q-input>
+        <div class="col-5 list-section">
+          <div class="list-header">
+            <div class="text-subtitle2">所有 BOM</div>
+            <q-input v-model="searchText" dense outlined placeholder="搜尋 BOM..." class="q-mt-sm">
+              <template v-slot:append>
+                <q-icon name="search" />
+              </template>
+            </q-input>
+          </div>
 
           <div class="list-container">
             <q-list bordered separator class="rounded-borders source-list" :class="{ 'items-dragging': isDragging }">
@@ -44,24 +46,46 @@
         </div>
 
         <!-- 中間按鈕組 -->
-        <div class="col-2 flex flex-center column q-gutter-y-md">
-          <q-btn icon="chevron_right" round color="primary" :disable="selectedSourceItems.length === 0" @click="addSelectedItems">
-            <q-tooltip>加入選擇的 BOM</q-tooltip>
-          </q-btn>
-          <q-btn icon="chevron_left" round color="secondary" :disable="selectedTargetItems.length === 0" @click="removeSelectedItems">
-            <q-tooltip>移除選擇的 BOM</q-tooltip>
-          </q-btn>
-          <q-btn icon="first_page" round color="negative" :disable="targetBOMs.length === 0" @click="removeAllItems">
-            <q-tooltip>移除全部 BOM</q-tooltip>
-          </q-btn>
+        <div class="col-auto buttons-section">
+          <div class="buttons-container">
+            <q-btn
+              icon="chevron_right"
+              round
+              flat
+              color="grey-8"
+              size="sm"
+              :disable="selectedSourceItems.length === 0"
+              @click="addSelectedItems"
+            >
+              <q-tooltip>加入選擇的 BOM</q-tooltip>
+            </q-btn>
+            <q-btn
+              icon="chevron_left"
+              round
+              flat
+              color="grey-8"
+              size="sm"
+              :disable="selectedTargetItems.length === 0"
+              @click="removeSelectedItems"
+            >
+              <q-tooltip>移除選擇的 BOM</q-tooltip>
+            </q-btn>
+            <q-btn icon="first_page" round flat color="grey-8" size="sm" :disable="targetBOMs.length === 0" @click="removeAllItems">
+              <q-tooltip>移除全部 BOM</q-tooltip>
+            </q-btn>
+          </div>
         </div>
 
         <!-- 右側清單 -->
-        <div class="col-5">
-          <div class="text-subtitle2 q-mb-sm">
-            要顯示的 BOM
-            <span class="text-caption text-grey-8 q-ml-sm"> 已選擇 {{ targetBOMs.length }} 個 BOM </span>
+        <div class="col-5 list-section">
+          <div class="list-header">
+            <div class="text-subtitle2">已選擇的 BOM ({{ targetBOMs.length }})</div>
+            <div class="description text-grey-7 q-mt-sm">
+              <div>• 拖曳 <q-icon name="drag_indicator" size="16px" /> 可調整顯示順序</div>
+              <div>• 雙擊項目可移除</div>
+            </div>
           </div>
+
           <div class="list-container">
             <q-list bordered separator class="rounded-borders target-list" :class="{ 'items-dragging': isDragging }">
               <draggable v-model="targetBOMs" item-key="_id" handle=".handle" @start="isDragging = true" @end="isDragging = false">
@@ -89,17 +113,26 @@
           </div>
         </div>
       </div>
-    </q-card-section>
-  </q-card>
+    </div>
+
+    <!-- resize 控制區域 -->
+    <div class="resize-controls">
+      <!-- 底部調整大小控制條 -->
+      <div class="resize-bottom" @mousedown.prevent="startResizeBottom"></div>
+      <!-- 右下角調整大小控制點 -->
+      <div class="resize-corner" @mousedown.prevent="startResizeCorner"></div>
+    </div>
+  </div>
 </template>
 
 <script setup>
-  import { ref, computed, watch, onMounted, nextTick } from "vue";
+  import { ref, computed, watch, onMounted, onUnmounted } from "vue";
   import { useQuasar } from "quasar";
   import draggable from "vuedraggable/src/vuedraggable";
   import { inject } from "vue";
   import log from "app/bomix/utils/logger";
 
+  // Props 和 Emits
   const props = defineProps({
     bomType: {
       type: String,
@@ -108,6 +141,9 @@
     },
   });
 
+  const emit = defineEmits(["close"]);
+
+  // 注入依賴
   const bomix = inject("BoMix");
   const $q = useQuasar();
 
@@ -118,11 +154,27 @@
   const selectedSourceItems = ref([]);
   const selectedTargetItems = ref([]);
   const isDragging = ref(false);
-  const dialogRef = ref(null);
+  const isResizing = ref(false);
+  const dragStart = ref({ x: 0, y: 0 });
+  const cardRef = ref(null);
   const lastClickedSource = ref(null);
   const lastClickedTarget = ref(null);
-  const minWidth = 900;
-  const minHeight = 600;
+  const windowSize = computed(() => ({
+    width: window.innerWidth,
+    height: window.innerHeight,
+  }));
+
+  // 尺寸限制
+  const sizeLimit = computed(() => ({
+    min: {
+      width: Math.floor(windowSize.value.width * 0.5),
+      height: Math.floor(windowSize.value.height * 0.5),
+    },
+    max: {
+      width: Math.floor(windowSize.value.width * 0.95),
+      height: Math.floor(windowSize.value.height * 0.95),
+    },
+  }));
 
   // 計算屬性
   const bomTypeLabel = computed(() => {
@@ -220,30 +272,135 @@
     selectedTargetItems.value = [];
   };
 
-  // 處理窗口大小調整
-  const onResize = ({ width, height }) => {
-    if (!dialogRef.value) return;
+  // 拖動相關方法
+  const startDrag = (event) => {
+    if (event.target.closest("button")) return;
 
-    // 確保不超出主窗口大小
-    const maxWidth = window.innerWidth * 0.95;
-    const maxHeight = window.innerHeight * 0.9;
+    isDragging.value = true;
+    const rect = cardRef.value.getBoundingClientRect();
 
-    const newWidth = Math.min(Math.max(width, minWidth), maxWidth);
-    const newHeight = Math.min(Math.max(height, minHeight), maxHeight);
+    dragStart.value = {
+      x: event.clientX - rect.left,
+      y: event.clientY - rect.top,
+    };
 
-    requestAnimationFrame(() => {
-      dialogRef.value.style.width = `${newWidth}px`;
-      dialogRef.value.style.height = `${newHeight}px`;
-    });
+    document.addEventListener("mousemove", onDrag);
+    document.addEventListener("mouseup", stopDrag);
   };
 
-  // 初始化窗口大小
-  const initializeDialogSize = () => {
-    if (!dialogRef.value) return;
+  const onDrag = (event) => {
+    if (!isDragging.value || !cardRef.value) return;
 
-    const width = dialogRef.value.offsetWidth;
-    const height = dialogRef.value.offsetHeight;
-    onResize({ width, height });
+    const rect = cardRef.value.getBoundingClientRect();
+    const container = document.querySelector(".main-layout"); // 獲取主應用容器
+    const containerRect = container.getBoundingClientRect();
+
+    let newX = event.clientX - dragStart.value.x;
+    let newY = event.clientY - dragStart.value.y;
+
+    // 限制在主應用容器範圍內
+    newX = Math.max(containerRect.left, Math.min(newX, containerRect.right - rect.width));
+    newY = Math.max(containerRect.top, Math.min(newY, containerRect.bottom - rect.height));
+
+    cardRef.value.style.left = `${newX}px`;
+    cardRef.value.style.top = `${newY}px`;
+  };
+
+  const stopDrag = () => {
+    isDragging.value = false;
+    document.removeEventListener("mousemove", onDrag);
+    document.removeEventListener("mouseup", stopDrag);
+  };
+
+  // Resize 相關方法
+  const startResizeCorner = (event) => {
+    event.stopPropagation();
+    if (!cardRef.value) return;
+
+    isResizing.value = true;
+    const rect = cardRef.value.getBoundingClientRect();
+
+    dragStart.value = {
+      startX: event.clientX,
+      startY: event.clientY,
+      startWidth: rect.width,
+      startHeight: rect.height,
+      left: rect.left,
+      type: "corner",
+    };
+
+    document.addEventListener("mousemove", onResize);
+    document.addEventListener("mouseup", stopResize);
+  };
+
+  const startResizeBottom = (event) => {
+    event.stopPropagation();
+    if (!cardRef.value) return;
+
+    isResizing.value = true;
+    const rect = cardRef.value.getBoundingClientRect();
+
+    dragStart.value = {
+      startX: event.clientX,
+      startY: event.clientY,
+      startWidth: rect.width,
+      startHeight: rect.height,
+      type: "bottom",
+    };
+
+    document.addEventListener("mousemove", onResize);
+    document.addEventListener("mouseup", stopResize);
+  };
+
+  const onResize = (event) => {
+    if (!isResizing.value || !cardRef.value) return;
+
+    const container = document.querySelector(".main-layout");
+    if (!container) return;
+
+    const containerRect = container.getBoundingClientRect();
+    const rect = cardRef.value.getBoundingClientRect();
+
+    if (dragStart.value.type === "corner") {
+      // 計算寬度和高度的變化量
+      const deltaWidth = event.clientX - dragStart.value.startX;
+      const deltaHeight = event.clientY - dragStart.value.startY;
+
+      // 計算新的寬度和高度
+      let newWidth = dragStart.value.startWidth + deltaWidth;
+      let newHeight = dragStart.value.startHeight + deltaHeight;
+
+      // 確保不超出容器右邊界
+      const maxPossibleWidth = containerRect.right - dragStart.value.left;
+
+      // 限制最小和最大尺寸
+      newWidth = Math.min(Math.max(newWidth, sizeLimit.value.min.width), Math.min(sizeLimit.value.max.width, maxPossibleWidth));
+      newHeight = Math.min(
+        Math.max(newHeight, sizeLimit.value.min.height),
+        Math.min(sizeLimit.value.max.height, containerRect.bottom - rect.top)
+      );
+
+      // 應用新的尺寸
+      cardRef.value.style.width = `${newWidth}px`;
+      cardRef.value.style.height = `${newHeight}px`;
+    } else if (dragStart.value.type === "bottom") {
+      // 只調整高度
+      const deltaHeight = event.clientY - dragStart.value.startY;
+      let newHeight = dragStart.value.startHeight + deltaHeight;
+
+      newHeight = Math.min(
+        Math.max(newHeight, sizeLimit.value.min.height),
+        Math.min(sizeLimit.value.max.height, containerRect.bottom - rect.top)
+      );
+
+      cardRef.value.style.height = `${newHeight}px`;
+    }
+  };
+
+  const stopResize = () => {
+    isResizing.value = false;
+    document.removeEventListener("mousemove", onResize);
+    document.removeEventListener("mouseup", stopResize);
   };
 
   // 處理源清單點擊
@@ -314,90 +471,237 @@
     { deep: true }
   );
 
+  // 修改初始化邏輯
+  const initializeCard = () => {
+    if (!cardRef.value) return;
+
+    const container = document.querySelector(".main-layout");
+    const containerRect = container.getBoundingClientRect();
+
+    const initialWidth = Math.min(Math.max(900, sizeLimit.value.min.width), sizeLimit.value.max.width);
+    const initialHeight = Math.min(Math.max(600, sizeLimit.value.min.height), sizeLimit.value.max.height);
+
+    // 設置初始尺寸
+    cardRef.value.style.width = `${initialWidth}px`;
+    cardRef.value.style.height = `${initialHeight}px`;
+
+    // 設置初始位置（置中）
+    const left = containerRect.left + (containerRect.width - initialWidth) / 2;
+    const top = containerRect.top + (containerRect.height - initialHeight) / 2;
+
+    cardRef.value.style.left = `${left}px`;
+    cardRef.value.style.top = `${top}px`;
+  };
+
+  // 生命週期鉤子
   onMounted(() => {
     loadBOMs();
-    // 等待 DOM 更新後初始化大小
-    nextTick(() => {
-      initializeDialogSize();
-    });
+    // 等待下一個渲染週期再初始化卡片
+    requestAnimationFrame(initializeCard);
+  });
+
+  onUnmounted(() => {
+    document.removeEventListener("mousemove", onDrag);
+    document.removeEventListener("mouseup", stopDrag);
+    document.removeEventListener("mousemove", onResize);
+    document.removeEventListener("mouseup", stopResize);
   });
 </script>
 
 <style lang="scss" scoped>
   .bom-selector {
-    width: 900px;
-    max-width: 95vw;
-    max-height: 90vh;
+    position: fixed;
     display: flex;
     flex-direction: column;
-    position: relative;
-    resize: both;
-    overflow: hidden;
-  }
-
-  .resize-handle {
-    position: absolute;
-    right: 0;
-    bottom: 0;
-    width: 20px;
-    height: 20px;
-    cursor: se-resize;
-    background: linear-gradient(135deg, transparent 0%, transparent 50%, rgba(0, 0, 0, 0.1) 50%, rgba(0, 0, 0, 0.1) 100%);
-  }
-
-  .q-card__section:last-child {
-    flex: 1;
-    overflow: hidden;
-  }
-
-  .list-container {
-    height: 450px;
-    display: flex;
-    flex-direction: column;
-  }
-
-  .source-list,
-  .target-list {
-    flex: 1;
-    overflow-y: auto;
     background: white;
-    border: 1px solid rgba(0, 0, 0, 0.12);
+    border-radius: 4px;
+    box-shadow: 0 2px 4px -1px rgba(0, 0, 0, 0.2), 0 4px 5px 0 rgba(0, 0, 0, 0.14), 0 1px 10px 0 rgba(0, 0, 0, 0.12);
+    width: 900px;
+    height: 600px;
+    transform: translate(0, 0);
+    transition: none;
+    z-index: 6000; // 確保在其他元素之上
 
-    &.items-dragging {
-      cursor: move;
-    }
-
-    .q-item {
-      cursor: pointer;
-      user-select: none;
-
-      &:hover {
-        background-color: rgba(0, 0, 0, 0.03);
-      }
-
-      &.selected {
-        background-color: rgba(25, 118, 210, 0.1) !important;
-      }
-    }
-
-    .bom-item {
+    .titlebar {
       display: flex;
       align-items: center;
-      font-family: monospace;
-      font-size: 14px;
+      padding: 4px 12px;
+      background: #e0e0e0;
+      cursor: move;
+      user-select: none;
+      border-top-left-radius: 4px;
+      border-top-right-radius: 4px;
+      height: 36px;
 
-      .project {
-        min-width: 120px;
+      &:hover {
+        background: #d5d5d5;
       }
 
-      .phase {
-        min-width: 60px;
-        margin-left: 8px;
+      .text-h6 {
+        margin: 0;
+        font-size: 1rem;
+        font-weight: 500;
+      }
+    }
+
+    .content-area {
+      flex: 1;
+      overflow: hidden;
+      padding: 12px;
+      height: calc(100% - 36px);
+      background: #f5f5f5;
+
+      .h-100 {
+        height: 100%;
       }
 
-      .version {
-        min-width: 40px;
-        margin-left: 8px;
+      .list-section {
+        display: flex;
+        flex-direction: column;
+        height: 100%;
+
+        .list-header {
+          flex: 0 0 auto;
+          margin-bottom: 8px;
+        }
+
+        .list-container {
+          flex: 1;
+          overflow: hidden;
+          min-height: 0; // 重要：允許 flex 子元素收縮
+
+          .source-list,
+          .target-list {
+            height: 100%;
+            overflow-y: auto;
+            background: white;
+            border: 1px solid rgba(0, 0, 0, 0.12);
+            border-radius: 4px;
+
+            &.items-dragging {
+              cursor: move;
+            }
+
+            .q-item {
+              cursor: pointer;
+              user-select: none;
+              min-height: 32px;
+              padding: 4px 8px;
+
+              &:hover {
+                background-color: rgba(0, 0, 0, 0.03);
+              }
+
+              &.selected {
+                background-color: rgba(25, 118, 210, 0.1) !important;
+              }
+            }
+          }
+        }
+      }
+
+      .buttons-section {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        height: 100%;
+        padding: 8px 0;
+
+        .buttons-container {
+          display: flex;
+          flex-direction: column;
+          gap: 8px;
+          align-items: center;
+          justify-content: center;
+          height: auto;
+
+          .q-btn {
+            width: 32px !important;
+            height: 32px !important;
+            padding: 6px !important;
+            opacity: 1;
+            transition: all 0.3s ease;
+
+            &:hover:not(:disabled) {
+              background-color: rgba(0, 0, 0, 0.05);
+              opacity: 1;
+            }
+
+            &:active:not(:disabled) {
+              background-color: rgba(0, 0, 0, 0.1);
+            }
+
+            &:disabled {
+              opacity: 0.4 !important;
+              color: rgba(0, 0, 0, 0.4) !important;
+            }
+
+            .q-icon {
+              font-size: 24px;
+              font-weight: 600;
+            }
+
+            &::before {
+              box-shadow: none !important;
+            }
+          }
+        }
+      }
+    }
+
+    .resize-controls {
+      position: absolute;
+      right: 0;
+      bottom: 0;
+      z-index: 1;
+
+      .resize-bottom {
+        position: absolute;
+        bottom: 0;
+        left: -100%;
+        width: calc(100% - 24px);
+        height: 6px;
+        cursor: ns-resize;
+        background: transparent;
+
+        &:hover {
+          background: rgba(0, 0, 0, 0.1);
+        }
+      }
+
+      .resize-corner {
+        position: absolute;
+        right: 0;
+        bottom: 0;
+        width: 24px;
+        height: 24px;
+        cursor: se-resize;
+        background: linear-gradient(135deg, transparent 0%, transparent 50%, rgba(0, 0, 0, 0.1) 50%, rgba(0, 0, 0, 0.1) 100%);
+
+        &:hover {
+          background: linear-gradient(135deg, transparent 0%, transparent 50%, rgba(0, 0, 0, 0.2) 50%, rgba(0, 0, 0, 0.2) 100%);
+        }
+
+        &::after {
+          content: "";
+          position: absolute;
+          right: 4px;
+          bottom: 4px;
+          width: 0;
+          height: 0;
+          border-style: solid;
+          border-width: 0 0 8px 8px;
+          border-color: transparent transparent rgba(0, 0, 0, 0.3) transparent;
+        }
+      }
+    }
+
+    .description {
+      font-size: 0.85rem;
+      line-height: 1.4;
+
+      .q-icon {
+        vertical-align: text-bottom;
       }
     }
   }
@@ -407,7 +711,30 @@
     color: #666;
   }
 
-  .q-btn {
-    margin: 4px 0;
+  .bom-item {
+    display: flex;
+    align-items: center;
+    font-family: monospace;
+    font-size: 13px;
+    gap: 12px;
+    width: 100%;
+
+    .project {
+      flex: 1;
+      min-width: 0;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .phase {
+      flex: 0 0 30px;
+      text-align: left;
+    }
+
+    .version {
+      flex: 0 0 30px;
+      text-align: left;
+    }
   }
 </style>
