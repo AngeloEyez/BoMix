@@ -595,6 +595,15 @@
               &.selected {
                 background-color: rgba(25, 118, 210, 0.1) !important;
               }
+
+              .q-item__section--avatar {
+                min-width: 24px;
+                padding-right: 4px;
+              }
+
+              .q-item__section--side {
+                padding-left: 4px;
+              }
             }
           }
         }
@@ -716,7 +725,7 @@
     align-items: center;
     font-family: monospace;
     font-size: 13px;
-    gap: 12px;
+    gap: 8px;
     width: 100%;
 
     .project {
@@ -725,16 +734,19 @@
       overflow: hidden;
       text-overflow: ellipsis;
       white-space: nowrap;
+      margin-left: -4px;
     }
 
     .phase {
       flex: 0 0 30px;
       text-align: left;
+      padding-left: 4px;
     }
 
     .version {
       flex: 0 0 30px;
       text-align: left;
+      padding-left: 4px;
     }
   }
 </style>
