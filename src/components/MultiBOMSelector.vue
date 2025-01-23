@@ -458,7 +458,7 @@
     async (newValue) => {
       // 只儲存 _id
       const selectedIds = newValue.map((bom) => bom._id);
-      const currentConfig = bomix.seriesInfo?.value?.config || { selectedBOMs: {} };
+      const currentConfig = JSON.parse(JSON.stringify(bomix.seriesInfo?.value?.config || { selectedBOMs: {} })); // 深拷貝以避免克隆錯誤
 
       try {
         await bomix.updateSeriesInfo({
