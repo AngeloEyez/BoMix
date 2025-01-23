@@ -188,10 +188,13 @@
 
   const filteredSourceBOMs = computed(() => {
     if (!searchText.value) return sourceBOMs.value;
-    const searchLower = searchText.value.toLowerCase();
+    const searchTerms = searchText.value
+      .toLowerCase()
+      .split(" ")
+      .filter((term) => term);
     return sourceBOMs.value.filter((bom) => {
       const bomText = `${bom.project}_${bom.phase}_${bom.version}`.toLowerCase();
-      return bomText.includes(searchLower);
+      return searchTerms.every((term) => bomText.includes(term));
     });
   });
 
