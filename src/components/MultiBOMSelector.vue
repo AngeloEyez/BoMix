@@ -547,7 +547,7 @@
     .content-area {
       flex: 1;
       overflow: hidden;
-      padding: 12px;
+      padding: 6px 2px 1px 18px;
       height: calc(100% - 36px);
       background: #f5f5f5;
 
@@ -559,6 +559,9 @@
         display: flex;
         flex-direction: column;
         height: 100%;
+        flex: 1; // 讓 list-section 填滿可用空間
+        padding-right: 6px;
+        padding-left: 6px;
 
         .list-header {
           flex: 0 0 auto;
