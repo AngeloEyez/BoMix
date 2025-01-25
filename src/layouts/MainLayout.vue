@@ -1,6 +1,6 @@
 <template>
-  <q-layout view="hHh LpR fff" class="main-layout">
-    <q-header elevated class="bg-white text-black">
+  <q-layout view="hHh lpR lff" class="main-layout">
+    <q-header :reveal="false" elevated class="bg-white text-black">
       <q-toolbar class="header-toolbar">
         <q-toolbar-title class="text-primary text-bold">BoMix</q-toolbar-title>
 
@@ -19,23 +19,30 @@
       </q-toolbar>
     </q-header>
 
-    <div class="left-sidebar" :style="{ width: sidebarWidth + 'px' }">
+    <q-drawer
+      v-model="drawerOpen"
+      :width="sidebarWidth"
+      :mini="isMiniMode"
+      :mini-width="MINI_WIDTH"
+      :breakpoint="900"
+      bordered
+      :behavior="'desktop'"
+      class="left-drawer bg-white"
+    >
       <q-list padding class="sidebar-content">
-        <!-- <q-item-label header class="text-grey-8"> Records </q-item-label> -->
-
-        <EssentialLink v-for="link in linksList" :key="link.title" v-bind="link" :mini="isMiniMode" @navigate="handleNavigate" />
+        <EssentialLink v-for="link in linksList" :key="link.title" v-bind="link" :mini="isMiniMode" />
       </q-list>
 
       <div class="resize-handle" @mousedown="startResize" @click="toggleSidebarMode">
         <q-icon :name="isMiniMode ? 'chevron_right' : 'chevron_left'" size="20px" />
       </div>
-    </div>
+    </q-drawer>
 
     <q-page-container class="content-container" :style="contentStyle">
       <router-view />
     </q-page-container>
 
-    <q-footer v-if="bomix.config.value.enableSessionLog" :style="footerStyle" class="bg-white">
+    <q-footer v-if="bomix.config.value.enableSessionLog" :style="footerStyle" :reveal="false" class="bg-white">
       <SessionLog ref="sessionLog" />
     </q-footer>
 
@@ -59,8 +66,8 @@
   const bomix = inject("BoMix");
   const seriesInfo = bomix.getSeriesInfo();
 
-  const MINI_WIDTH = 64;
-  const FULL_WIDTH = 240;
+  const MINI_WIDTH = 40;
+  const FULL_WIDTH = 150;
   const sidebarWidth = ref(FULL_WIDTH);
   const isMiniMode = computed(() => sidebarWidth.value <= MINI_WIDTH + 20);
   const isResizing = ref(false);
@@ -69,15 +76,11 @@
 
   const footerStyle = computed(() => ({
     height: bomix.sessionLogState.value.height + "px",
-    marginLeft: `${sidebarWidth.value}px`,
-    width: `calc(100% - ${sidebarWidth.value}px)`,
     padding: 0,
     minHeight: "unset",
   }));
 
   const contentStyle = computed(() => ({
-    marginLeft: `${sidebarWidth.value}px`,
-    width: `calc(100% - ${sidebarWidth.value}px)`,
     height: "100%",
   }));
 
@@ -99,12 +102,17 @@
   const showConfig = ref(false);
   const showEditSeries = ref(false);
   const sessionLog = ref(null);
+  const drawerOpen = ref(true);
+
+  // 添加一個狀態來記錄是否是用戶手動收合
+  const isUserCollapsed = ref(false);
 
   function startResize(e) {
     if (e.target.classList.contains("resize-handle")) {
       isResizing.value = true;
       startX.value = e.clientX;
       startWidth.value = sidebarWidth.value;
+      e.stopPropagation();
     }
   }
 
@@ -113,6 +121,7 @@
       const diff = e.clientX - startX.value;
       const newWidth = Math.max(MINI_WIDTH, Math.min(startWidth.value + diff, 400));
       sidebarWidth.value = newWidth;
+      isUserCollapsed.value = false; // 重置用戶收合狀態
     }
   }
 
@@ -121,20 +130,29 @@
   }
 
   function toggleSidebarMode() {
-    sidebarWidth.value = isMiniMode.value ? FULL_WIDTH : MINI_WIDTH;
-  }
-
-  function handleNavigate() {
-    if (window.innerWidth < 1024) {
+    if (isMiniMode.value) {
+      sidebarWidth.value = FULL_WIDTH;
+      isUserCollapsed.value = false;
+    } else {
       sidebarWidth.value = MINI_WIDTH;
+      isUserCollapsed.value = true;
     }
   }
 
-  function pageStyleFn(offset) {
-    const logHeight = bomix.config.value.enableSessionLog ? bomix.sessionLogState.value.height : 0;
-    return {
-      minHeight: offset ? `calc(100vh - ${offset + logHeight}px)` : "100vh",
-    };
+  // 修改 handleWindowResize 函數
+  function handleWindowResize() {
+    // 如果是用戶手動收合的，保持收合狀態
+    if (isUserCollapsed.value) {
+      sidebarWidth.value = MINI_WIDTH;
+      return;
+    }
+
+    // 否則根據窗口寬度自動調整
+    if (window.innerWidth < 900) {
+      sidebarWidth.value = MINI_WIDTH;
+    } else {
+      sidebarWidth.value = FULL_WIDTH;
+    }
   }
 
   onMounted(async () => {
@@ -144,12 +162,15 @@
     }
     document.addEventListener("mousemove", handleMouseMove);
     document.addEventListener("mouseup", handleMouseUp);
+    window.addEventListener("resize", handleWindowResize);
+    handleWindowResize(); // 初始化時檢查窗口大小
     await bomix.loadSeriesInfo();
   });
 
   onUnmounted(() => {
     document.removeEventListener("mousemove", handleMouseMove);
     document.removeEventListener("mouseup", handleMouseUp);
+    window.removeEventListener("resize", handleWindowResize);
   });
 </script>
 
@@ -187,9 +208,9 @@
       }
     }
 
-    .left-sidebar {
+    .left-drawer {
       position: fixed;
-      top: 64px;
+      top: 0;
       left: 0;
       bottom: 0;
       background: white;
@@ -201,17 +222,18 @@
         height: 100%;
         overflow-y: auto;
         overflow-x: hidden;
+        padding-top: 8px !important;
       }
 
       .resize-handle {
         position: absolute;
         top: 50%;
-        right: -12px;
-        width: 24px;
-        height: 24px;
+        right: -1px;
+        width: 10px;
+        height: 100px;
         background: white;
         border: 1px solid rgba(0, 0, 0, 0.12);
-        border-radius: 50%;
+        border-radius: 10px;
         display: flex;
         align-items: center;
         justify-content: center;
@@ -219,6 +241,7 @@
         transform: translateY(-50%);
         z-index: 1001;
         transition: background-color 0.3s;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 
         &:hover {
           background-color: #f0f0f0;
@@ -226,6 +249,12 @@
 
         &:active {
           background-color: #e0e0e0;
+        }
+
+        .q-icon {
+          font-size: 18px;
+          color: #666;
+          margin-right: 0px;
         }
       }
     }
