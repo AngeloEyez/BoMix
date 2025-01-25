@@ -2,14 +2,50 @@
 
 <template>
   <q-page class="q-pa-md">
-    <div class="text-h5 q-mb-md">BOM 檢視器</div>
+    <div style="background: purple">
+      <div class="text-h5 q-mb-md">BOM 檢視器</div>
 
-    <!-- <div class="row q-gutter-md q-mb-lg">
-      <q-btn color="primary" icon="playlist_add" label="選擇 Common BOM" @click="showSelector('common')" />
-      <q-btn color="secondary" icon="playlist_add" label="選擇 Matrix BOM" @click="showSelector('matrix')" />
-      <q-btn color="accent" icon="playlist_add" label="選擇 BCCL BOM" @click="showSelector('bccl')" />
-    </div> -->
-
+      <div class="row q-gutter-md q-mb-lg">
+        <q-btn color="primary" icon="playlist_add" label="選擇 Common BOM" @click="showSelector('common')" />
+        <q-btn color="secondary" icon="playlist_add" label="選擇 Matrix BOM" @click="showSelector('matrix')" />
+        <q-btn color="accent" icon="playlist_add" label="選擇 BCCL BOM" @click="showSelector('bccl')" />
+      </div>
+      <div class="row q-gutter-md q-mb-lg">
+        <q-btn color="primary" icon="playlist_add" label="選擇 Common BOM" @click="showSelector('common')" />
+        <q-btn color="secondary" icon="playlist_add" label="選擇 Matrix BOM" @click="showSelector('matrix')" />
+        <q-btn color="accent" icon="playlist_add" label="選擇 BCCL BOM" @click="showSelector('bccl')" />
+      </div>
+      <div class="row q-gutter-md q-mb-lg">
+        <q-btn color="primary" icon="playlist_add" label="選擇 Common BOM" @click="showSelector('common')" />
+        <q-btn color="secondary" icon="playlist_add" label="選擇 Matrix BOM" @click="showSelector('matrix')" />
+        <q-btn color="accent" icon="playlist_add" label="選擇 BCCL BOM" @click="showSelector('bccl')" />
+      </div>
+      <div class="row q-gutter-md q-mb-lg">
+        <q-btn color="primary" icon="playlist_add" label="選擇 Common BOM" @click="showSelector('common')" />
+        <q-btn color="secondary" icon="playlist_add" label="選擇 Matrix BOM" @click="showSelector('matrix')" />
+        <q-btn color="accent" icon="playlist_add" label="選擇 BCCL BOM" @click="showSelector('bccl')" />
+      </div>
+      <div class="row q-gutter-md q-mb-lg">
+        <q-btn color="primary" icon="playlist_add" label="選擇 Common BOM" @click="showSelector('common')" />
+        <q-btn color="secondary" icon="playlist_add" label="選擇 Matrix BOM" @click="showSelector('matrix')" />
+        <q-btn color="accent" icon="playlist_add" label="選擇 BCCL BOM" @click="showSelector('bccl')" />
+      </div>
+      <div class="row q-gutter-md q-mb-lg">
+        <q-btn color="primary" icon="playlist_add" label="選擇 Common BOM" @click="showSelector('common')" />
+        <q-btn color="secondary" icon="playlist_add" label="選擇 Matrix BOM" @click="showSelector('matrix')" />
+        <q-btn color="accent" icon="playlist_add" label="選擇 BCCL BOM" @click="showSelector('bccl')" />
+      </div>
+      <div class="row q-gutter-md q-mb-lg">
+        <q-btn color="primary" icon="playlist_add" label="選擇 Common BOM" @click="showSelector('common')" />
+        <q-btn color="secondary" icon="playlist_add" label="選擇 Matrix BOM" @click="showSelector('matrix')" />
+        <q-btn color="accent" icon="playlist_add" label="選擇 BCCL BOM" @click="showSelector('bccl')" />
+      </div>
+      <div class="row q-gutter-md q-mb-lg">
+        <q-btn color="primary" icon="playlist_add" label="選擇 Common BOM" @click="showSelector('common')" />
+        <q-btn color="secondary" icon="playlist_add" label="選擇 Matrix BOM" @click="showSelector('matrix')" />
+        <q-btn color="accent" icon="playlist_add" label="選擇 BCCL BOM" @click="showSelector('bccl')" />
+      </div>
+    </div>
     <!-- BOM 內容顯示區域 -->
     <BOMViewer />
 
@@ -45,7 +81,11 @@
   .q-page {
     //max-width: 1200px;
     //margin: 0 auto;
-    min-height: 100vh;
+    min-height: 10vh;
+    padding: 6px;
+    padding-bottom: 100px;
+    //height: 10%;
+    background: palegreen;
   }
 
   .selector-overlay {

@@ -38,7 +38,7 @@
       </div>
     </q-drawer>
 
-    <q-page-container class="content-container">
+    <q-page-container>
       <router-view />
     </q-page-container>
 
@@ -251,11 +251,6 @@
           margin-right: 0px;
         }
       }
-    }
-
-    .content-container {
-      background-color: #f5f5f5;
-      position: relative;
     }
 
     .series-info {

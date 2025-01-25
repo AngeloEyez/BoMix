@@ -8,14 +8,7 @@
     <div class="toggle-area">
       <div class="toggle-button" @click="toggleCollapse">
         <span class="toggle-title">Session Log</span>
-        <q-btn
-          flat
-          dense
-          round
-          size="xs"
-          :icon="isCollapsed ? 'expand_less' : 'expand_more'"
-          style="min-height: 16px; width: 16px; font-size: 14px"
-        />
+        <q-icon :name="isCollapsed ? 'expand_less' : 'expand_more'" size="18px" />
       </div>
     </div>
 
@@ -116,7 +109,7 @@
   function notifyStateChange() {
     bomix.sessionLogState.value = {
       isCollapsed: isCollapsed.value,
-      height: isCollapsed.value ? LOG_BUTTON_HEIGHT + LOG_AREA_HEIGHT : height.value + LOG_BUTTON_HEIGHT,
+      height: isCollapsed.value ? LOG_AREA_HEIGHT : height.value + LOG_BUTTON_HEIGHT,
     };
     console.log(bomix.sessionLogState.value);
   }
@@ -158,7 +151,7 @@
       height: 24px !important;
 
       .collapsed-log {
-        padding: 6px 10px 2px 10px;
+        padding: 3px 10px 2px 10px; /* top | right | bottom | left */
         font-family: calibri;
         font-size: 11px;
         white-space: nowrap;
@@ -188,7 +181,7 @@
       height: 6px;
       cursor: ns-resize;
       background: transparent;
-      z-index: 1002;
+      z-index: 1000;
 
       &:hover {
         background-color: rgba(0, 0, 0, 0.1);
@@ -197,24 +190,28 @@
 
     .toggle-area {
       position: absolute;
-      top: -12px;
+      top: -8px;
       left: 50%;
       transform: translateX(-50%);
-      z-index: 1001;
+      z-index: 1002;
+      pointer-events: auto;
 
       .toggle-button {
-        height: 18px;
+        height: 14px;
         background: white;
+        color: #666;
         border: 1px solid rgba(0, 0, 0, 0.12);
         border-radius: 9px;
         display: flex;
         align-items: center;
-        padding: 0 1px 0 8px;
+        padding: 1px 0 0 8px;
         gap: 2px;
         cursor: pointer;
+        transition: background-color 0.2s;
+        z-index: 1;
 
         .toggle-title {
-          font-size: 11px;
+          font-size: 10px;
           color: #666;
           user-select: none;
           white-space: nowrap;
@@ -222,6 +219,10 @@
 
         &:hover {
           background-color: #f0f0f0;
+        }
+
+        &:active {
+          background-color: #e0e0e0;
         }
       }
     }

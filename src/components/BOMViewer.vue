@@ -1,6 +1,7 @@
 # 修改 BOMViewer 組件的布局和顯示方式
 <template>
   <div class="bom-viewer">
+    abc
     <!-- Common BOM 表格 -->
     <div v-if="commonBOMs.length > 0" class="common-bom-section">
       <div class="text-subtitle1 q-mb-sm">Common BOM</div>
