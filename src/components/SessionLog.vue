@@ -1,10 +1,6 @@
 <!-- 系統日誌組件 -->
 <template>
-  <div
-    class="session-log"
-    :class="{ collapsed: isCollapsed }"
-    :style="{ height: height + 'px' }"
-  >
+  <div class="session-log" :class="{ collapsed: isCollapsed }" :style="{ height: height + 'px' }">
     <!-- 上邊界拖拽區域 -->
     <div v-show="!isCollapsed" class="resize-handle" @mousedown="startResize" />
 
@@ -34,26 +30,13 @@
         <div class="log-scroll-container">
           <q-scroll-area class="log-scroll-area">
             <div class="log-text">
-              <div
-                v-for="(log, index) in logs"
-                :key="index"
-                class="log-line"
-                :class="log.level"
-              >
+              <div v-for="(log, index) in logs" :key="index" class="log-line" :class="log.level">
                 <span class="log-timestamp">{{ log.timestamp }}</span>
                 {{ log.message }}
               </div>
             </div>
           </q-scroll-area>
-          <q-btn
-            class="clear-btn"
-            flat
-            dense
-            round
-            icon="delete"
-            size="sm"
-            @click="clearLogs"
-          />
+          <q-btn class="clear-btn" flat dense round icon="delete" size="sm" @click="clearLogs" />
         </div>
       </div>
     </template>
@@ -61,251 +44,250 @@
 </template>
 
 <script setup>
-import { ref, onMounted, onUnmounted, computed, inject } from "vue";
+  import { ref, onMounted, onUnmounted, computed, inject } from "vue";
 
-const bomix = inject("BoMix");
-const MIN_HEIGHT = 100;
-const DEFAULT_HEIGHT = 100;
+  const bomix = inject("BoMix");
+  const MIN_HEIGHT = 100;
+  const DEFAULT_HEIGHT = 100;
+  const LOG_AREA_HEIGHT = 20; // Log區域高度
+  const LOG_BUTTON_HEIGHT = 24; // SessionLog button高度
 
-// 計算最大高度
-function getMaxHeight() {
-  const windowHeight = window.innerHeight;
-  const headerHeight = 64; // MainLayout header height
-  return Math.floor((windowHeight - headerHeight) * 0.8); // 允許使用 80% 的可視區域
-}
-
-// 日誌相關的響應式變量
-const isCollapsed = ref(true);
-const height = ref(DEFAULT_HEIGHT);
-const lastExpandedHeight = ref(DEFAULT_HEIGHT);
-const isResizing = ref(false);
-const startY = ref(0);
-const startHeight = ref(0);
-
-// 獲取日誌數據
-const logs = computed(() => bomix.getSessionLogs().value);
-const lastLog = computed(() => logs.value[0]);
-
-// 日誌區域拖拽調整大小
-function startResize(e) {
-  if (!isCollapsed.value) {
-    isResizing.value = true;
-    startY.value = e.clientY;
-    startHeight.value = height.value;
-    e.preventDefault();
+  // 計算最大高度
+  function getMaxHeight() {
+    const windowHeight = window.innerHeight;
+    const headerHeight = 64; // MainLayout header height
+    return Math.floor((windowHeight - headerHeight) * 0.8); // 允許使用 80% 的可視區域
   }
-}
 
-function handleMouseMove(e) {
-  if (isResizing.value) {
-    const diff = startY.value - e.clientY;
-    const newHeight = Math.min(
-      Math.max(MIN_HEIGHT, startHeight.value + diff),
-      getMaxHeight()
-    );
-    height.value = newHeight;
-    lastExpandedHeight.value = newHeight;
-    notifyStateChange();
+  // 日誌相關的響應式變量
+  const isCollapsed = ref(true);
+  const height = ref(DEFAULT_HEIGHT);
+  const lastExpandedHeight = ref(DEFAULT_HEIGHT);
+  const isResizing = ref(false);
+  const startY = ref(0);
+  const startHeight = ref(0);
+
+  // 獲取日誌數據
+  const logs = computed(() => bomix.getSessionLogs().value);
+  const lastLog = computed(() => logs.value[0]);
+
+  // 日誌區域拖拽調整大小
+  function startResize(e) {
+    if (!isCollapsed.value) {
+      isResizing.value = true;
+      startY.value = e.clientY;
+      startHeight.value = height.value;
+      e.preventDefault();
+    }
   }
-}
 
-function handleMouseUp() {
-  isResizing.value = false;
-}
+  function handleMouseMove(e) {
+    if (isResizing.value) {
+      const diff = startY.value - e.clientY;
+      const newHeight = Math.min(Math.max(MIN_HEIGHT, startHeight.value + diff), getMaxHeight());
+      height.value = newHeight;
+      lastExpandedHeight.value = newHeight;
+      notifyStateChange();
+    }
+  }
 
-// 切換日誌區域的展開/收起狀態
-function toggleCollapse() {
-  isCollapsed.value = !isCollapsed.value;
-  if (isCollapsed.value) {
+  function handleMouseUp() {
     isResizing.value = false;
-    lastExpandedHeight.value = height.value; // 收合時記住當前高度
-  } else {
-    height.value = lastExpandedHeight.value; // 展開時恢復上次的高度
   }
-  notifyStateChange();
-}
 
-// 清空日誌
-function clearLogs() {
-  bomix.clearSessionLogs();
-}
-
-// 通知狀態變化
-function notifyStateChange() {
-  const event = new CustomEvent("session-log-change", {
-    detail: {
-      isCollapsed: isCollapsed.value,
-      height: isCollapsed.value ? 0 : height.value + 24, // 加上按鈕的高度
-    },
-  });
-  window.dispatchEvent(event);
-}
-
-// 監聽視窗大小變化，確保高度不超過新的限制
-function handleResize() {
-  const maxHeight = getMaxHeight();
-  if (height.value > maxHeight) {
-    height.value = maxHeight;
-    lastExpandedHeight.value = maxHeight;
+  // 切換日誌區域的展開/收起狀態
+  function toggleCollapse() {
+    isCollapsed.value = !isCollapsed.value;
+    if (isCollapsed.value) {
+      isResizing.value = false;
+      lastExpandedHeight.value = height.value; // 收合時記住當前高度
+    } else {
+      height.value = lastExpandedHeight.value; // 展開時恢復上次的高度
+    }
     notifyStateChange();
   }
-}
 
-// 監聽全局鼠標事件和視窗大小變化
-onMounted(() => {
-  document.addEventListener("mousemove", handleMouseMove);
-  document.addEventListener("mouseup", handleMouseUp);
-  window.addEventListener("resize", handleResize);
-});
+  // 清空日誌
+  function clearLogs() {
+    bomix.clearSessionLogs();
+  }
 
-onUnmounted(() => {
-  document.removeEventListener("mousemove", handleMouseMove);
-  document.removeEventListener("mouseup", handleMouseUp);
-  window.removeEventListener("resize", handleResize);
-});
+  // 通知狀態變化
+  function notifyStateChange() {
+    const event = new CustomEvent("session-log-change", {
+      detail: {
+        isCollapsed: isCollapsed.value,
+        height: isCollapsed.value ? LOG_BUTTON_HEIGHT + LOG_AREA_HEIGHT : height.value + LOG_BUTTON_HEIGHT, // 加上按鈕的高度
+      },
+    });
+    window.dispatchEvent(event);
+  }
+
+  // 監聽視窗大小變化，確保高度不超過新的限制
+  function handleResize() {
+    const maxHeight = getMaxHeight();
+    if (height.value > maxHeight) {
+      height.value = maxHeight;
+      lastExpandedHeight.value = maxHeight;
+      notifyStateChange();
+    }
+  }
+
+  // 監聽全局鼠標事件和視窗大小變化
+  onMounted(() => {
+    document.addEventListener("mousemove", handleMouseMove);
+    document.addEventListener("mouseup", handleMouseUp);
+    window.addEventListener("resize", handleResize);
+  });
+
+  onUnmounted(() => {
+    document.removeEventListener("mousemove", handleMouseMove);
+    document.removeEventListener("mouseup", handleMouseUp);
+    window.removeEventListener("resize", handleResize);
+  });
 </script>
 
 <style lang="scss" scoped>
-.session-log {
-  position: fixed;
-  bottom: 0;
-  left: 0;
-  right: 0;
-  background: white;
-  border-top: 1px solid rgba(0, 0, 0, 0.12);
-  transition: height 0s linear;
-  z-index: 1000;
-
-  &.collapsed {
-    height: 24px !important;
-
-    .collapsed-log {
-      padding: 6px 10px 2px 10px;
-      font-family: calibri;
-      font-size: 11px;
-      white-space: nowrap;
-      overflow: hidden;
-      text-overflow: ellipsis;
-      margin-right: 100px;
-
-      &.information {
-        color: #666;
-      }
-
-      &.warning {
-        color: var(--q-warning);
-      }
-
-      &.error {
-        color: var(--q-negative);
-      }
-    }
-  }
-
-  .resize-handle {
-    position: absolute;
-    top: -3px;
+  .session-log {
+    position: fixed;
+    bottom: 0;
     left: 0;
     right: 0;
-    height: 6px;
-    cursor: ns-resize;
-    background: transparent;
-    z-index: 1002;
+    background: white;
+    border-top: 1px solid rgba(0, 0, 0, 0.12);
+    transition: height 0s linear;
+    z-index: 1000;
 
-    &:hover {
-      background-color: rgba(0, 0, 0, 0.1);
-    }
-  }
+    &.collapsed {
+      height: 24px !important;
 
-  .toggle-area {
-    position: absolute;
-    top: -12px;
-    left: 50%;
-    transform: translateX(-50%);
-    z-index: 1001;
-
-    .toggle-button {
-      height: 18px;
-      background: white;
-      border: 1px solid rgba(0, 0, 0, 0.12);
-      border-radius: 9px;
-      display: flex;
-      align-items: center;
-      padding: 0 1px 0 8px;
-      gap: 2px;
-      cursor: pointer;
-
-      .toggle-title {
+      .collapsed-log {
+        padding: 6px 10px 2px 10px;
+        font-family: calibri;
         font-size: 11px;
-        color: #666;
-        user-select: none;
         white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        margin-right: 100px;
+
+        &.information {
+          color: #666;
+        }
+
+        &.warning {
+          color: var(--q-warning);
+        }
+
+        &.error {
+          color: var(--q-negative);
+        }
       }
+    }
+
+    .resize-handle {
+      position: absolute;
+      top: -3px;
+      left: 0;
+      right: 0;
+      height: 6px;
+      cursor: ns-resize;
+      background: transparent;
+      z-index: 1002;
 
       &:hover {
-        background-color: #f0f0f0;
+        background-color: rgba(0, 0, 0, 0.1);
       }
     }
-  }
 
-  .log-content {
-    height: calc(100% - 4px);
-    margin-top: 4px;
-    position: relative;
+    .toggle-area {
+      position: absolute;
+      top: -12px;
+      left: 50%;
+      transform: translateX(-50%);
+      z-index: 1001;
 
-    .log-scroll-container {
-      height: 100%;
-      position: relative;
-      padding: 2px 8px 8px 8px; //T/R/B/L
+      .toggle-button {
+        height: 18px;
+        background: white;
+        border: 1px solid rgba(0, 0, 0, 0.12);
+        border-radius: 9px;
+        display: flex;
+        align-items: center;
+        padding: 0 1px 0 8px;
+        gap: 2px;
+        cursor: pointer;
 
-      .log-scroll-area {
-        height: 100%;
-        padding-right: 36px;
-
-        .log-text {
-          margin: 0;
-          padding: 0px;
-          font-family: calibri;
+        .toggle-title {
           font-size: 11px;
+          color: #666;
+          user-select: none;
+          white-space: nowrap;
+        }
 
-          .log-line {
-            white-space: pre;
-            margin-bottom: 2px;
+        &:hover {
+          background-color: #f0f0f0;
+        }
+      }
+    }
 
-            .log-timestamp {
-              color: #999;
-              margin-right: 4px;
-            }
+    .log-content {
+      height: calc(100% - 4px);
+      margin-top: 4px;
+      position: relative;
 
-            &.information {
-              color: #666;
-            }
+      .log-scroll-container {
+        height: 100%;
+        position: relative;
+        padding: 2px 8px 8px 8px; //T/R/B/L
 
-            &.warning {
-              color: var(--q-warning);
-            }
+        .log-scroll-area {
+          height: 100%;
+          padding-right: 36px;
 
-            &.error {
-              color: var(--q-negative);
+          .log-text {
+            margin: 0;
+            padding: 0px;
+            font-family: calibri;
+            font-size: 11px;
+
+            .log-line {
+              white-space: pre;
+              margin-bottom: 2px;
+
+              .log-timestamp {
+                color: #999;
+                margin-right: 4px;
+              }
+
+              &.information {
+                color: #666;
+              }
+
+              &.warning {
+                color: var(--q-warning);
+              }
+
+              &.error {
+                color: var(--q-negative);
+              }
             }
           }
         }
-      }
 
-      .clear-btn {
-        position: absolute;
-        top: 8px;
-        right: 20px;
-        z-index: 2;
-        background: white;
-        opacity: 0.8;
-        transition: opacity 0.3s;
+        .clear-btn {
+          position: absolute;
+          top: 8px;
+          right: 20px;
+          z-index: 2;
+          background: white;
+          opacity: 0.8;
+          transition: opacity 0.3s;
 
-        &:hover {
-          opacity: 1;
+          &:hover {
+            opacity: 1;
+          }
         }
       }
     }
   }
-}
 </style>
