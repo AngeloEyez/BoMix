@@ -239,4 +239,22 @@ export class BoMixR {
       log.error("Update statistics failed:", error);
     }
   }
+
+  /**
+   * 根據 ID 取得完整的 BOM 內容
+   * @param {string} bomId - BOM 的 ID
+   * @returns {Promise<Object>} BOM 的完整內容，包含 groups
+   */
+  async getBOMById(bomId) {
+    try {
+      const response = await window.BoMixAPI.sendAction("get-full-bom", { bomId });
+      if (response.status === "success") {
+        return response.content;
+      }
+      throw new Error(response.message || "Failed to get BOM");
+    } catch (error) {
+      log.error("Failed to get BOM by ID:", error);
+      throw error;
+    }
+  }
 }

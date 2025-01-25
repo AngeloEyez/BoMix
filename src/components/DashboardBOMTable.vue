@@ -1,10 +1,5 @@
 <template>
-  <div
-    class="bom-table-container"
-    @drop.prevent="handleDrop"
-    @dragover.prevent
-    :style="containerStyle"
-  >
+  <div class="bom-table-container" @drop.prevent="handleDrop" @dragover.prevent :style="containerStyle">
     <div class="table-header">
       <q-btn
         flat
@@ -72,20 +67,12 @@
       <q-card>
         <q-card-section class="row items-center">
           <q-avatar icon="warning" color="negative" text-color="white" />
-          <span class="q-ml-sm"
-            >確定要刪除選中的 {{ selected.length }} 個 BOM 嗎？</span
-          >
+          <span class="q-ml-sm">確定要刪除選中的 {{ selected.length }} 個 BOM 嗎？</span>
         </q-card-section>
 
         <q-card-actions align="right">
           <q-btn flat label="取消" color="primary" v-close-popup />
-          <q-btn
-            flat
-            label="刪除"
-            color="negative"
-            @click="deleteBOMs"
-            v-close-popup
-          />
+          <q-btn flat label="刪除" color="negative" @click="deleteBOMs" v-close-popup />
         </q-card-actions>
       </q-card>
     </q-dialog>
@@ -93,271 +80,271 @@
 </template>
 
 <script setup>
-import { inject, ref, watch, onMounted, onUnmounted, computed } from "vue";
-import { Notify, useQuasar } from "quasar";
-import EditSeriesDialog from "components/EditSeriesDialog.vue";
+  import { inject, ref, watch, onMounted, onUnmounted, computed } from "vue";
+  import { Notify, useQuasar } from "quasar";
+  import EditSeriesDialog from "components/EditSeriesDialog.vue";
 
-const props = defineProps({
-  availableHeight: {
-    type: Number,
-    required: true,
-  },
-});
+  const props = defineProps({
+    availableHeight: {
+      type: Number,
+      required: true,
+    },
+  });
 
-// 計算容器高度
-const containerStyle = computed(() => ({
-  height: `${props.availableHeight}px`,
-  maxHeight: `${props.availableHeight}px`,
-}));
+  // 計算容器高度
+  const containerStyle = computed(() => ({
+    height: `${props.availableHeight}px`,
+    maxHeight: `${props.availableHeight}px`,
+  }));
 
-const bomix = inject("BoMix");
-const $q = useQuasar();
-const showEditSeries = ref(false);
-const selected = ref([]);
-const showDeleteConfirm = ref(false);
-const bomList = ref([]);
-const seriesInfo = bomix.getSeriesInfo();
-const hasSeries = ref(false);
+  const bomix = inject("BoMix");
+  const $q = useQuasar();
+  const showEditSeries = ref(false);
+  const selected = ref([]);
+  const showDeleteConfirm = ref(false);
+  const bomList = ref([]);
+  const seriesInfo = bomix.getSeriesInfo();
+  const hasSeries = ref(false);
 
-// 監聽 series 變化
-watch(
-  () => seriesInfo.value.path,
-  async (newPath) => {
-    if (newPath) {
-      hasSeries.value = true;
-      await loadBOMList();
-    } else {
-      hasSeries.value = false;
+  // 監聽 series 變化
+  watch(
+    () => seriesInfo.value.path,
+    async (newPath) => {
+      if (newPath) {
+        hasSeries.value = true;
+        await loadBOMList();
+      } else {
+        hasSeries.value = false;
+        bomList.value = [];
+        selected.value = [];
+      }
+    },
+    { immediate: true }
+  );
+
+  const columns = [
+    {
+      name: "project",
+      required: true,
+      label: "Project",
+      align: "left",
+      field: "project",
+      sortable: true,
+    },
+    {
+      name: "phase",
+      required: true,
+      label: "Phase",
+      align: "left",
+      field: "phase",
+      sortable: true,
+    },
+    {
+      name: "version",
+      required: true,
+      label: "Version",
+      align: "left",
+      field: "version",
+      sortable: true,
+    },
+    {
+      name: "date",
+      required: true,
+      label: "Date",
+      align: "left",
+      field: "date",
+      sortable: true,
+      format: (val) => new Date(val).toLocaleDateString(),
+    },
+  ];
+
+  async function loadBOMList() {
+    try {
+      if (!seriesInfo.value.path) {
+        bomList.value = [];
+        return;
+      }
+      const response = await window.BoMixAPI.sendAction("get-bom-list");
+      if (response.status === "success") {
+        bomList.value = response.content;
+      }
+    } catch (error) {
+      $q.notify({
+        type: "negative",
+        message: "載入 BOM 列表失敗",
+      });
       bomList.value = [];
-      selected.value = [];
     }
-  },
-  { immediate: true }
-);
+  }
 
-const columns = [
-  {
-    name: "project",
-    required: true,
-    label: "Project",
-    align: "left",
-    field: "project",
-    sortable: true,
-  },
-  {
-    name: "phase",
-    required: true,
-    label: "Phase",
-    align: "left",
-    field: "phase",
-    sortable: true,
-  },
-  {
-    name: "version",
-    required: true,
-    label: "Version",
-    align: "left",
-    field: "version",
-    sortable: true,
-  },
-  {
-    name: "date",
-    required: true,
-    label: "Date",
-    align: "left",
-    field: "date",
-    sortable: true,
-    format: (val) => new Date(val).toLocaleDateString(),
-  },
-];
+  async function handleDrop(event) {
+    let excelFiles = [];
+    for (const f of event.dataTransfer.files) {
+      if (f.name.endsWith(".xls") || f.name.endsWith(".xlsx"))
+        excelFiles.push({
+          path: window.BoMixAPI.getFilePath(f),
+          name: f.name,
+          type: f.type,
+          size: f.size,
+        });
+      console.log("File Path of dragged files: ", f.path);
+    }
 
-async function loadBOMList() {
-  try {
-    if (!seriesInfo.value.path) {
-      bomList.value = [];
+    if (excelFiles.length === 0) {
+      Notify.create({
+        type: "warning",
+        message: "沒有可導入的 Excel 文件",
+      });
       return;
     }
-    const response = await window.BoMixAPI.sendAction("get-bom-list");
-    if (response.status === "success") {
-      bomList.value = response.content;
-    }
-  } catch (error) {
-    $q.notify({
-      type: "negative",
-      message: "載入 BOM 列表失敗",
-    });
-    bomList.value = [];
-  }
-}
 
-async function handleDrop(event) {
-  let excelFiles = [];
-  for (const f of event.dataTransfer.files) {
-    if (f.name.endsWith(".xls") || f.name.endsWith(".xlsx"))
-      excelFiles.push({
-        path: window.BoMixAPI.getFilePath(f),
-        name: f.name,
-        type: f.type,
-        size: f.size,
-      });
-    console.log("File Path of dragged files: ", f.path);
-  }
-
-  if (excelFiles.length === 0) {
-    Notify.create({
-      type: "warning",
-      message: "沒有可導入的 Excel 文件",
-    });
-    return;
-  }
-
-  // 如果沒有 series path，先打開對話框
-  if (!seriesInfo.value.path) {
-    showEditSeries.value = true;
-    // 等待對話框關閉
-    await new Promise((resolve) => {
-      const unwatch = watch(showEditSeries, async (newVal) => {
-        if (!newVal) {
-          unwatch();
-          if (seriesInfo.value.path) {
-            resolve();
-          } else {
-            Notify.create({
-              type: "warning",
-              message: "未選擇數據庫，取消導入",
-            });
+    // 如果沒有 series path，先打開對話框
+    if (!seriesInfo.value.path) {
+      showEditSeries.value = true;
+      // 等待對話框關閉
+      await new Promise((resolve) => {
+        const unwatch = watch(showEditSeries, async (newVal) => {
+          if (!newVal) {
+            unwatch();
+            if (seriesInfo.value.path) {
+              resolve();
+            } else {
+              Notify.create({
+                type: "warning",
+                message: "未選擇數據庫，取消導入",
+              });
+            }
           }
-        }
+        });
       });
-    });
+    }
+
+    if (!seriesInfo.value.path) return;
+
+    await import_excel_files(excelFiles);
   }
 
-  if (!seriesInfo.value.path) return;
-
-  await import_excel_files(excelFiles);
-}
-
-async function import_excel_files(excelFiles = []) {
-  try {
-    const response = await window.BoMixAPI.sendAction("import-excel-files", {
-      files: excelFiles,
-    });
-
-    bomix.addSessionLogs(response.message);
-    if (response.status === "success") {
-      await loadBOMList();
-      await bomix.updateStatistics();
-      Notify.create({
-        type: "positive",
-        message: "成功導入 BOM 文件",
+  async function import_excel_files(excelFiles = []) {
+    try {
+      const response = await window.BoMixAPI.sendAction("import-excel-files", {
+        files: excelFiles,
       });
-    } else if (response.status === "error") {
+
+      bomix.addSessionLogs(response.message);
+      if (response.status === "success") {
+        await loadBOMList();
+        await bomix.updateStatistics();
+        Notify.create({
+          type: "positive",
+          message: "成功導入 BOM 文件",
+        });
+      } else if (response.status === "error") {
+        Notify.create({
+          type: "negative",
+          message: response.message || "導入失敗",
+        });
+      }
+    } catch (error) {
+      bomix.addSessionLogs(response.message);
       Notify.create({
         type: "negative",
-        message: response.message || "導入失敗",
+        message: error.message || "導入失敗",
       });
     }
-  } catch (error) {
-    bomix.addSessionLogs(response.message);
-    Notify.create({
-      type: "negative",
-      message: error.message || "導入失敗",
-    });
   }
-}
 
-function confirmDelete() {
-  if (selected.value.length > 0) {
-    showDeleteConfirm.value = true;
+  function confirmDelete() {
+    if (selected.value.length > 0) {
+      showDeleteConfirm.value = true;
+    }
   }
-}
 
-async function deleteBOMs() {
-  try {
-    const response = await window.BoMixAPI.sendAction("delete-boms", {
-      ids: selected.value.map((bom) => bom._id),
-    });
-    if (response.status === "success") {
+  async function deleteBOMs() {
+    try {
+      const response = await window.BoMixAPI.sendAction("delete-boms", {
+        ids: selected.value.map((bom) => bom._id),
+      });
+      if (response.status === "success") {
+        $q.notify({
+          type: "positive",
+          message: "刪除成功",
+        });
+        selected.value = [];
+        await loadBOMList();
+        await bomix.updateStatistics();
+      }
+    } catch (error) {
       $q.notify({
-        type: "positive",
-        message: "刪除成功",
+        type: "negative",
+        message: "刪除失敗",
       });
-      selected.value = [];
-      await loadBOMList();
-      await bomix.updateStatistics();
     }
-  } catch (error) {
-    $q.notify({
-      type: "negative",
-      message: "刪除失敗",
-    });
   }
-}
 </script>
 
 <style lang="scss" scoped>
-.bom-table-container {
-  background: white;
-  border-radius: 8px;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-  height: 100%;
-  display: flex;
-  flex-direction: column;
-  overflow: hidden;
-  width: 100%;
-  transition: height 0.3s ease;
-
-  .table-header {
-    padding: 8px 16px;
-    border-bottom: 1px solid #eee;
-    flex-shrink: 0;
-    display: flex;
-    gap: 8px;
-
-    .action-btn {
-      color: #666;
-      transition: all 0.3s ease;
-
-      &:not(.disabled):hover {
-        color: var(--q-primary);
-      }
-
-      &.disabled {
-        opacity: 0.5;
-      }
-    }
-  }
-
-  .bom-table {
-    flex: 1;
+  .bom-table-container {
+    background: white;
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    height: 100%;
     display: flex;
     flex-direction: column;
+    overflow: hidden;
+    width: 100%;
+    transition: height 0.3s ease;
 
-    :deep(.q-table__container) {
-      height: 100%;
+    .table-header {
+      padding: 8px 16px;
+      border-bottom: 1px solid #eee;
+      flex-shrink: 0;
+      display: flex;
+      gap: 8px;
+
+      .action-btn {
+        color: #666;
+        transition: all 0.3s ease;
+
+        &:not(.disabled):hover {
+          color: var(--q-primary);
+        }
+
+        &.disabled {
+          opacity: 0.5;
+        }
+      }
+    }
+
+    .bom-table {
+      flex: 1;
       display: flex;
       flex-direction: column;
-    }
 
-    :deep(.q-table__middle) {
-      flex: 1;
-      min-height: 100px;
-    }
+      :deep(.q-table__container) {
+        height: 100%;
+        display: flex;
+        flex-direction: column;
+      }
 
-    :deep(.q-virtual-scroll__content) {
-      flex: 1;
-    }
+      :deep(.q-table__middle) {
+        flex: 1;
+        min-height: 100px;
+      }
 
-    :deep(.q-table__grid-content) {
-      flex: 1;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-    }
+      :deep(.q-virtual-scroll__content) {
+        flex: 1;
+      }
 
-    :deep(.q-table__bottom) {
-      border-top: 1px solid rgba(0, 0, 0, 0.12);
+      :deep(.q-table__grid-content) {
+        flex: 1;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+
+      :deep(.q-table__bottom) {
+        border-top: 1px solid rgba(0, 0, 0, 0.12);
+      }
     }
   }
-}
 </style>

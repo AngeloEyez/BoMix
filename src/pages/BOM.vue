@@ -4,11 +4,14 @@
   <q-page class="q-pa-md">
     <div class="text-h5 q-mb-md">BOM 檢視器</div>
 
-    <div class="row q-gutter-md q-mb-lg">
+    <!-- <div class="row q-gutter-md q-mb-lg">
       <q-btn color="primary" icon="playlist_add" label="選擇 Common BOM" @click="showSelector('common')" />
       <q-btn color="secondary" icon="playlist_add" label="選擇 Matrix BOM" @click="showSelector('matrix')" />
       <q-btn color="accent" icon="playlist_add" label="選擇 BCCL BOM" @click="showSelector('bccl')" />
-    </div>
+    </div> -->
+
+    <!-- BOM 內容顯示區域 -->
+    <BOMViewer />
 
     <!-- 使用 Teleport 將選擇器移到 body 層級 -->
     <Teleport to="body">
@@ -23,9 +26,10 @@
   import { ref } from "vue";
   import { defineOptions } from "vue";
   import MultiBOMSelector from "components/MultiBOMSelector.vue";
+  import BOMViewer from "components/BOMViewer.vue";
 
   defineOptions({
-    name: "BOMViewer",
+    name: "BOM",
   });
 
   const showSelectorDialog = ref(false);
