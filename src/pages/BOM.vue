@@ -43,8 +43,9 @@
 
 <style lang="scss" scoped>
   .q-page {
-    max-width: 1200px;
-    margin: 0 auto;
+    //max-width: 1200px;
+    //margin: 0 auto;
+    min-height: 100vh;
   }
 
   .selector-overlay {
