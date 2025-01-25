@@ -9,7 +9,7 @@ const routes = [
       },
       {
         path: "bom-viewer",
-        component: () => import("pages/BOMViewer.vue"),
+        component: () => import("src/pages/BOM.vue"),
       },
     ],
   },
