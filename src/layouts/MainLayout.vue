@@ -38,7 +38,7 @@
       </div>
     </q-drawer>
 
-    <q-page-container class="content-container" :style="contentStyle">
+    <q-page-container class="content-container">
       <router-view />
     </q-page-container>
 
@@ -65,7 +65,11 @@
   const version = ref("");
   const bomix = inject("BoMix");
   const seriesInfo = bomix.getSeriesInfo();
+  const showConfig = ref(false);
+  const showEditSeries = ref(false);
+  const sessionLog = ref(null);
 
+  /* ** 側邊欄寬度控制 ** */
   const MINI_WIDTH = 40;
   const FULL_WIDTH = 150;
   const sidebarWidth = ref(FULL_WIDTH);
@@ -73,16 +77,8 @@
   const isResizing = ref(false);
   const startX = ref(0);
   const startWidth = ref(0);
-
-  const footerStyle = computed(() => ({
-    height: bomix.sessionLogState.value.height + "px",
-    padding: 0,
-    minHeight: "unset",
-  }));
-
-  const contentStyle = computed(() => ({
-    height: "100%",
-  }));
+  const drawerOpen = ref(true);
+  const isUserCollapsed = ref(false); // 添加一個狀態來記錄是否是用戶手動收合
 
   const linksList = [
     {
@@ -98,14 +94,6 @@
       link: "/bom-viewer",
     },
   ];
-
-  const showConfig = ref(false);
-  const showEditSeries = ref(false);
-  const sessionLog = ref(null);
-  const drawerOpen = ref(true);
-
-  // 添加一個狀態來記錄是否是用戶手動收合
-  const isUserCollapsed = ref(false);
 
   function startResize(e) {
     if (e.target.classList.contains("resize-handle")) {
@@ -154,6 +142,12 @@
       sidebarWidth.value = FULL_WIDTH;
     }
   }
+
+  const footerStyle = computed(() => ({
+    height: bomix.sessionLogState.value.height + "px",
+    padding: 0,
+    minHeight: "unset",
+  }));
 
   onMounted(async () => {
     const response = await window.BoMixAPI.sendAction("get-app-version");
@@ -216,12 +210,12 @@
       background: white;
       border-right: 1px solid rgba(0, 0, 0, 0.12);
       z-index: 1000;
-      transition: width 0.3s ease;
+      transition: width 0.1s ease;
+      overflow-x: hidden;
 
       .sidebar-content {
         height: 100%;
         overflow-y: auto;
-        overflow-x: hidden;
         padding-top: 8px !important;
       }
 
@@ -240,7 +234,7 @@
         cursor: pointer;
         transform: translateY(-50%);
         z-index: 1001;
-        transition: background-color 0.3s;
+        transition: background-color 0.2s;
         box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 
         &:hover {
@@ -261,11 +255,6 @@
 
     .content-container {
       background-color: #f5f5f5;
-      transition: margin-left 0.2s ease, width 0.2s ease;
-      height: 100%; /* 高度填满父容器 */
-      display: flex; /* 确保支持子元素的布局调整 */
-      flex-direction: column; /* 子元素从上到下排列 */
-      overflow: hidden;
       position: relative;
     }
 
@@ -292,7 +281,7 @@
 
       .series-edit-btn {
         color: #666;
-        transition: all 0.3s ease;
+        transition: all 0.2s ease;
 
         &:hover {
           color: var(--q-primary);

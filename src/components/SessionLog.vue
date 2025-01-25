@@ -118,6 +118,7 @@
       isCollapsed: isCollapsed.value,
       height: isCollapsed.value ? LOG_BUTTON_HEIGHT + LOG_AREA_HEIGHT : height.value + LOG_BUTTON_HEIGHT,
     };
+    console.log(bomix.sessionLogState.value);
   }
 
   // 監聽視窗大小變化，確保高度不超過新的限制
@@ -146,14 +147,12 @@
 
 <style lang="scss" scoped>
   .session-log {
-    position: fixed;
-    bottom: 0;
-    left: 0;
-    right: 0;
+    height: 100%;
+    width: 100%;
     background: white;
     border-top: 1px solid rgba(0, 0, 0, 0.12);
     transition: height 0s linear;
-    z-index: 1000;
+    position: relative;
 
     &.collapsed {
       height: 24px !important;
