@@ -4,12 +4,13 @@ import { DEFAULT_CONFIG } from "./config/defaultConfig";
 import { SessionLog } from "./sessionLog";
 
 export class BoMixR {
-  #seriesInfo;
-  #statistics;
-  #config;
-  #sessionLogs;
-  #initialized;
-  sessionLog;
+  #seriesInfo; // 系列信息
+  #statistics; // 統計信息
+  #config; // 配置信息
+  #sessionLogs; // 系統日誌內容
+  #initialized; // 是否已初始化
+  sessionLog; // 系統日誌類
+  sessionLogState; // 新增 sessionLogState
 
   constructor() {
     this.sessionLog = SessionLog;
@@ -27,6 +28,10 @@ export class BoMixR {
     this.#config = ref({ ...DEFAULT_CONFIG });
     this.#initialized = false;
     this.#sessionLogs = ref([]);
+    this.sessionLogState = ref({
+      isCollapsed: true,
+      height: 24, // 預設高度為按鈕高度
+    });
   }
 
   // 添加系統日誌

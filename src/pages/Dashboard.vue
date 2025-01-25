@@ -64,16 +64,6 @@
 
   // 監聽 session log 狀態
   const MIN_TABLE_HEIGHT = 200;
-  const sessionLogState = ref({
-    isCollapsed: true,
-    height: 0,
-  });
-
-  // 監聽 session log 狀態變化
-  function handleSessionLogChange(event) {
-    console.log("handleSessionLogChange", event.detail);
-    sessionLogState.value = event.detail;
-  }
 
   // 監聽 enableSessionLog 設定變化
   watch(
@@ -95,7 +85,7 @@
     // 計算與 session log 的間距
     const logSpace = !bomix.config.value.enableSessionLog
       ? 20 // 如果日誌被禁用，不需要預留空間
-      : sessionLogState.value.height;
+      : bomix.sessionLogState.value.height;
 
     // 計算實際可用高度
     let containerHeight = availableHeight - logSpace;
@@ -196,8 +186,6 @@
       }, 100);
       // 監聽視窗大小變化
       window.addEventListener("resize", handleWindowResize);
-      // 監聽 session log 狀態變化
-      window.addEventListener("session-log-change", handleSessionLogChange);
     } catch (error) {
       console.error("Failed to initialize:", error);
     }
@@ -214,7 +202,6 @@
       clearTimeout(resizeTimeout);
     }
     window.removeEventListener("resize", handleWindowResize);
-    window.removeEventListener("session-log-change", handleSessionLogChange);
   });
 
   defineOptions({

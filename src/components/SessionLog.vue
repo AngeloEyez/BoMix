@@ -114,13 +114,10 @@
 
   // 通知狀態變化
   function notifyStateChange() {
-    const event = new CustomEvent("session-log-change", {
-      detail: {
-        isCollapsed: isCollapsed.value,
-        height: isCollapsed.value ? LOG_BUTTON_HEIGHT + LOG_AREA_HEIGHT : height.value + LOG_BUTTON_HEIGHT, // 加上按鈕的高度
-      },
-    });
-    window.dispatchEvent(event);
+    bomix.sessionLogState.value = {
+      isCollapsed: isCollapsed.value,
+      height: isCollapsed.value ? LOG_BUTTON_HEIGHT + LOG_AREA_HEIGHT : height.value + LOG_BUTTON_HEIGHT,
+    };
   }
 
   // 監聽視窗大小變化，確保高度不超過新的限制

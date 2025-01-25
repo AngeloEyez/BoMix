@@ -57,21 +57,6 @@
   const bomix = inject("BoMix");
   const seriesInfo = bomix.getSeriesInfo();
 
-  onMounted(async () => {
-    const response = await window.BoMixAPI.sendAction("get-app-version");
-    if (response.status === "success") {
-      version.value = response.content;
-    }
-    document.addEventListener("mousemove", handleMouseMove);
-    document.addEventListener("mouseup", handleMouseUp);
-    await bomix.loadSeriesInfo();
-  });
-
-  onUnmounted(() => {
-    document.removeEventListener("mousemove", handleMouseMove);
-    document.removeEventListener("mouseup", handleMouseUp);
-  });
-
   const MINI_WIDTH = 64;
   const FULL_WIDTH = 240;
   const sidebarWidth = ref(FULL_WIDTH);
@@ -133,6 +118,28 @@
       sidebarWidth.value = MINI_WIDTH;
     }
   }
+
+  function pageStyleFn(offset) {
+    const logHeight = bomix.config.value.enableSessionLog ? bomix.sessionLogState.value.height : 0;
+    return {
+      minHeight: offset ? `calc(100vh - ${offset + logHeight}px)` : "100vh",
+    };
+  }
+
+  onMounted(async () => {
+    const response = await window.BoMixAPI.sendAction("get-app-version");
+    if (response.status === "success") {
+      version.value = response.content;
+    }
+    document.addEventListener("mousemove", handleMouseMove);
+    document.addEventListener("mouseup", handleMouseUp);
+    await bomix.loadSeriesInfo();
+  });
+
+  onUnmounted(() => {
+    document.removeEventListener("mousemove", handleMouseMove);
+    document.removeEventListener("mouseup", handleMouseUp);
+  });
 </script>
 
 <style lang="scss">
