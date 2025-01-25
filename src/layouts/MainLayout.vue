@@ -1,5 +1,5 @@
 <template>
-  <q-layout view="hHh LpR fFf" class="main-layout">
+  <q-layout view="hHh LpR fff" class="main-layout">
     <q-header elevated class="bg-white text-black">
       <q-toolbar class="header-toolbar">
         <q-toolbar-title class="text-primary text-bold">BoMix</q-toolbar-title>
@@ -35,7 +35,9 @@
       <router-view />
     </q-page-container>
 
-    <SessionLog v-if="bomix.config.value.enableSessionLog" :style="{ marginLeft: sidebarWidth + 'px' }" ref="sessionLog" />
+    <q-footer v-if="bomix.config.value.enableSessionLog" :style="footerStyle" class="bg-white">
+      <SessionLog ref="sessionLog" />
+    </q-footer>
 
     <ConfigDialog v-model="showConfig" />
     <EditSeriesDialog v-model="showEditSeries" />
@@ -65,9 +67,18 @@
   const startX = ref(0);
   const startWidth = ref(0);
 
+  const footerStyle = computed(() => ({
+    height: bomix.sessionLogState.value.height + "px",
+    marginLeft: `${sidebarWidth.value}px`,
+    width: `calc(100% - ${sidebarWidth.value}px)`,
+    padding: 0,
+    minHeight: "unset",
+  }));
+
   const contentStyle = computed(() => ({
     marginLeft: `${sidebarWidth.value}px`,
     width: `calc(100% - ${sidebarWidth.value}px)`,
+    height: "100%",
   }));
 
   const linksList = [
