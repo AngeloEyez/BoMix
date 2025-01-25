@@ -1,6 +1,6 @@
 <!-- 系統日誌組件 -->
 <template>
-  <div class="session-log" :class="{ collapsed: isCollapsed }" :style="{ height: height + 'px' }">
+  <div class="session-log" :class="{ collapsed: isCollapsed }">
     <!-- 上邊界拖拽區域 -->
     <div v-show="!isCollapsed" class="resize-handle" @mousedown="startResize" />
 
